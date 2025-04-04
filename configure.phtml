@@ -1,0 +1,83 @@
+<?php
+// Configuration view for the FreshRSS Ollama extension
+// Save as: ./extensions/FreshrssOllamaExtension/configure.phtml
+?>
+
+<form action="<?php echo _url('extension', 'configure', 'e',  urlencode($this->getName())); ?>" method="post">
+    <input type="hidden" name="_csrf" value="<?php echo FreshRSS_Auth::csrfToken(); ?>" />
+    <div class="form-group">
+        <label class="group-name" for="chrome_host"><?php echo _t('Chrome Host'); ?></label>
+        <div class="group-controls">
+            <input type="text" name="chrome_host" id="chrome_host" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_chrome_host ?? 'localhost'; ?>" />
+            <p class="help"><?php echo _t('Hostname where Chrome is running with remote debugging enabled (only used if "Use Chrome" is checked)'); ?></p>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-name" for="chrome_port"><?php echo _t('Chrome Port'); ?></label>
+        <div class="group-controls">
+            <input type="number" name="chrome_port" id="chrome_port" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_chrome_port ?? 9222; ?>" />
+            <p class="help"><?php echo _t('Debug port for Chrome (default: 9222, only used if "Use Chrome" is checked)'); ?></p>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-name" for="ollama_host"><?php echo _t('Ollama Host'); ?></label>
+        <div class="group-controls">
+            <input type="text" name="ollama_host" id="ollama_host" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_ollama_host ?? 'http://localhost:11434'; ?>" />
+            <p class="help"><?php echo _t('URL of the Ollama API endpoint (default: http://localhost:11434)'); ?></p>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-name" for="ollama_model"><?php echo _t('Ollama Model'); ?></label>
+        <div class="group-controls">
+            <input type="text" name="ollama_model" id="ollama_model" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_ollama_model ?? 'llama3'; ?>" />
+            <p class="help"><?php echo _t('The model name to use for summarization (e.g., llama3, mistral, gemma)'); ?></p>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-name" for="num_tags"><?php echo _t('Number of Tags'); ?></label>
+        <div class="group-controls">
+            <input type="number" name="num_tags" id="num_tags" min="1" max="10" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_num_tags ?? 5; ?>" />
+            <p class="help"><?php echo _t('Number of tags to generate for each article'); ?></p>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-name" for="summary_length"><?php echo _t('Summary Length'); ?></label>
+        <div class="group-controls">
+            <input type="number" name="summary_length" id="summary_length" min="50" max="500" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_summary_length ?? 150; ?>" />
+            <p class="help"><?php echo _t('Target length of the summary in words'); ?></p>
+        </div>
+    </div>
+
+    <div class="form-group form-actions">
+        <div class="group-controls">
+            <button type="submit" class="btn btn-important"><?php echo _t('Save'); ?></button>
+        </div>
+    </div>
+</form>
+
+<h3>Setup Instructions</h3>
+<ol>
+    <li>
+        <strong>Chrome Setup:</strong> You need to run Chrome/Chromium with remote debugging enabled. Start Chrome with:
+        <pre>google-chrome --remote-debugging-port=9222 --headless</pre>
+    </li>
+    <li>
+        <strong>Ollama Setup:</strong> Install and run Ollama on your server. Make sure it's accessible at the configured host/port.
+    </li>
+    <li>
+        <strong>PHP Requirements:</strong> This extension requires the cURL extension for PHP (ext-curl), which is typically included with standard PHP installations.
+    </li>
+</ol>
+
+<h3>How It Works</h3>
+<p>When a new RSS item is fetched, this extension:</p>
+<ol>
+    <li>Uses Chrome's debugging protocol to visit the article URL and extract the content</li>
+    <li>Sends the content to Ollama for analysis</li>
+    <li>Adds the generated summary and tags to the RSS item</li>
+</ol>

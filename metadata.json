@@ -1,0 +1,8 @@
+{
+	"name": "FreshRss Ollama",
+	"author": "Pavel Safronov",
+	"description": "Fetch article content and generate summar and tags using ollama",
+	"version": 0.3,
+	"entrypoint": "FreshRssOllama",
+	"type": "system"
+}
