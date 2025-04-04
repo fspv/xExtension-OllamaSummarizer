@@ -63,14 +63,33 @@
 <h3>Setup Instructions</h3>
 <ol>
     <li>
-        <strong>Chrome Setup:</strong> You need to run Chrome/Chromium with remote debugging enabled. Start Chrome with:
-        <pre>google-chrome --remote-debugging-port=9222 --headless</pre>
+        <strong>Chrome Setup:</strong> You need to run Chrome/Chromium with remote debugging enabled. Start Chrome docker compose:
+        <pre>
+  chrome:
+    image: gcr.io/zenika-hub/alpine-chrome:123
+    restart: unless-stopped
+    container_name: chrome
+    command:
+      - --no-sandbox
+      - --disable-gpu
+      - --disable-dev-shm-usage
+      - --remote-debugging-address=127.0.0.1
+      - --remote-debugging-port=9222
+      - --hide-scrollbars
+      - --disable-extensions-except=/chrome/extensions/isdcac
+      - --load-extension=/chrome/extensions/isdcac
+      - --enable-logging
+      - --verbose
+      - --log-level=debug
+      # - --v=3 # full debug
+      - --enable-features=ConversionMeasurement,AttributionReportingCrossAppWeb
+        </pre>
     </li>
     <li>
         <strong>Ollama Setup:</strong> Install and run Ollama on your server. Make sure it's accessible at the configured host/port.
     </li>
     <li>
-        <strong>PHP Requirements:</strong> This extension requires the cURL extension for PHP (ext-curl), which is typically included with standard PHP installations.
+        <strong>PHP Requirements:</strong> This extension requires the cURL extension for PHP (ext-curl, available in FreshRSS) and textalk/websocket for WebSocket support (not included in FreshRSS, install via composer).
     </li>
 </ol>
 
