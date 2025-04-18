@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Name: Ollama Summarizer
- * Author: Claude
+ * Author: Pavel Safronov
  * Description: Fetches article content using Chrome and uses Ollama to generate tags and summaries
  * Version: 0.1.1
  */
@@ -12,10 +14,8 @@
 //
 // TODO:
 // - Tests (need to implement dependency injection of fetchers first to avoid mocking stuff)
-// - Handle trailing slash in ollama URL
 // - Consistent naming (primarily of config variables)
 // - Examples of using with docker (chrome + ollama + freshrss)
-// - Fix author
 // - Set up builds
 // - Handle situations when ollama is not available
 // - Handle ollama auth
@@ -24,22 +24,23 @@
 // - set up vim lsp for php
 //
 // nix-shell -p php83Packages.php-cs-fixer --pure --command 'php-cs-fixer fix extension.php'
+// nix-shell -p php83Packages.composer --pure --run 'composer install'
+// git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
 
 require_once dirname(__FILE__) . '/../../vendor/autoload.php';
 
-use WebSocket\Client;
 
 class FreshrssOllamaExtension extends Minz_Extension
 {
     private const LOG_PREFIX = 'FreshRssOllama';
 
-    public function init()
+    public function init(): void
     {
         Minz_Log::debug(self::LOG_PREFIX . ': Initializing');
         $this->registerHook('entry_before_insert', array($this, 'processEntry'));
     }
 
-    public function handleConfigureAction()
+    public function handleConfigureAction(): void
     {
         Minz_Log::debug(self::LOG_PREFIX . ': handleConfigureAction called');
         $this->registerTranslates();
@@ -48,12 +49,12 @@ class FreshrssOllamaExtension extends Minz_Extension
             Minz_Log::debug(self::LOG_PREFIX . ': Processing configuration form submission');
 
             // Get and log form values
-            $chrome_host = Minz_Request::param('chrome_host', 'localhost');
-            $chrome_port = Minz_Request::param('chrome_port', 9222);
-            $ollama_host = Minz_Request::param('ollama_host', 'http://localhost:11434');
-            $ollama_model = Minz_Request::param('ollama_model', 'llama3');
-            $num_tags = Minz_Request::param('num_tags', 5);
-            $summary_length = Minz_Request::param('summary_length', 150);
+            $chrome_host = Minz_Request::paramString('chrome_host', 'localhost');
+            $chrome_port = Minz_Request::paramInt('chrome_port', 9222);
+            $ollama_host = Minz_Request::paramString('ollama_host', 'http://localhost:11434');
+            $ollama_model = Minz_Request::paramString('ollama_model', 'llama3');
+            $num_tags = Minz_Request::paramInt('num_tags', 5);
+            $summary_length = Minz_Request::paramInt('summary_length', 150);
 
             // Strip trailing slash from ollama_host
             $ollama_host = rtrim($ollama_host, '/');
@@ -86,7 +87,7 @@ class FreshrssOllamaExtension extends Minz_Extension
         }
     }
 
-    public function processEntry($entry)
+    public function processEntry(FreshRSS_Entry $entry): FreshRSS_Entry
     {
         Minz_Log::debug(self::LOG_PREFIX . ': Processing entry: ' . json_encode($entry->toArray()));
 
@@ -106,7 +107,7 @@ class FreshrssOllamaExtension extends Minz_Extension
         @$dom->loadHTML($entry->content(), LIBXML_NOERROR);
         $xpath = new DOMXPath($dom);
         $aiSummaryDivs = $xpath->query('//div[contains(@class, "ai-summary")]');
-        
+
         if ($aiSummaryDivs->length > 0) {
             Minz_Log::debug(self::LOG_PREFIX . ': Entry already processed (found ai-summary div), skipping');
             return $entry;
@@ -147,14 +148,16 @@ class FreshrssOllamaExtension extends Minz_Extension
 
             // Mark as processed to avoid reprocessing
             $tags = $entry->tags();
-            $tags[] = 'ai-processed';
-            $entry->_tags($tags);
-            Minz_Log::debug(self::LOG_PREFIX . ': Marked entry as processed');
+            if (!in_array('ai-processed', $tags)) {
+                $tags[] = 'ai-processed';
+                $entry->_tags($tags);
+                Minz_Log::debug(self::LOG_PREFIX . ': Marked entry as processed');
+            }
 
         } catch (Exception $e) {
             Minz_Log::error(self::LOG_PREFIX . ' error: ' . $e->getMessage());
             Minz_Log::error(self::LOG_PREFIX . ' stack trace: ' . $e->getTraceAsString());
-            
+
             // Re-throw the exception so the caller can handle it
             throw $e;
         }
@@ -170,7 +173,7 @@ class FreshrssOllamaExtension extends Minz_Extension
      * @param string $url The URL to fetch content from
      * @return string The content of the page
      */
-    private function fetchContentWithChromeWebSocket($url)
+    private function fetchContentWithChromeWebSocket(string $url): string
     {
         Minz_Log::debug(self::LOG_PREFIX . ': Connecting to Chrome DevTools via WebSocket');
 
@@ -195,30 +198,29 @@ class FreshrssOllamaExtension extends Minz_Extension
 
         $newTarget = json_decode($createResponse, true);
         $wsUrl = '';
+        $targetId = '';
         if (isset($newTarget['webSocketDebuggerUrl'])) {
             $wsUrl = $newTarget['webSocketDebuggerUrl'];
+            $targetId = $newTarget['id'] ?? '';
         } else {
             throw new Exception('No WebSocket URL in new target response');
         }
 
         Minz_Log::debug(self::LOG_PREFIX . ': WebSocket URL: ' . $wsUrl);
+        Minz_Log::debug(self::LOG_PREFIX . ': Target ID: ' . $targetId);
 
         // Connect to the WebSocket
         $options = [
            'timeout' => 60,
-           // 'fragment_size' => 4096, // Optional: set fragment size
            'context' => stream_context_create([
                'socket' => [
                    'tcp_nodelay' => true,
                ],
            ]),
-    ];
+        ];
         $client = new WebSocket\Client($wsUrl, $options);
 
         try {
-            // Generate a unique ID for this session
-            $sessionId = uniqid('session_', true);
-
             // Navigate to the URL
             $navigateMessage = json_encode([
                 'id' => 1,
@@ -242,24 +244,22 @@ class FreshrssOllamaExtension extends Minz_Extension
                 // TODO: for some reason, we never receive the Page.frameStoppedLoading event. The only event we receive is this
                 // {"id":1,"result":{"frameId":"6C9BB82D57A684D8882532811FFE2BC4","loaderId":"7FC35F7645DE5DDCA9E3F420555017AD"}}
                 break;
-
-                // Add timeout logic here if needed
             }
 
             // Wait a bit for JavaScript to execute (adjust as needed)
             sleep(10);
 
-            // Execute JavaScript to get the page content
-            $evalMessage = json_encode([
+            // First try to find and get content from article tag
+            $articleEvalMessage = json_encode([
                 'id' => 2,
                 'method' => 'Runtime.evaluate',
                 'params' => [
-                    'expression' => 'document.body.innerText',
+                    'expression' => 'document.querySelector("article")?.innerText || document.body.innerText',
                     'returnByValue' => true
                 ]
             ]);
-            Minz_Log::debug(self::LOG_PREFIX . ': Sending evaluation command: ' . $evalMessage);
-            $client->send($evalMessage);
+            Minz_Log::debug(self::LOG_PREFIX . ': Sending article evaluation command: ' . $articleEvalMessage);
+            $client->send($articleEvalMessage);
 
             // Get the evaluation result
             $content = '';
@@ -279,60 +279,94 @@ class FreshrssOllamaExtension extends Minz_Extension
 
             return $content;
         } finally {
-            Minz_Log::debug(self::LOG_PREFIX . ': Closing WebSocket connection');
-            // Close the WebSocket connection
-            $client->close();
+            Minz_Log::debug(self::LOG_PREFIX . ': Starting cleanup process');
 
-            Minz_Log::debug(self::LOG_PREFIX . ': Closing Chrome tab');
+            try {
+                // Close the WebSocket connection
+                if (isset($client)) {
+                    Minz_Log::debug(self::LOG_PREFIX . ': Closing WebSocket connection');
+                    $client->close();
+                }
 
-            // Optionally close the tab/target
-            $ch = curl_init("http://{$devtoolsHost}:{$devtoolsPort}/json/close/" . urlencode($sessionId));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_exec($ch);
-            curl_close($ch);
+                // Close the Chrome tab if we have a target ID
+                if (!empty($targetId)) {
+                    Minz_Log::debug(self::LOG_PREFIX . ': Closing Chrome tab with ID: ' . $targetId);
 
-            Minz_Log::debug(self::LOG_PREFIX . ': Chrome tab closed');
+                    $ch = curl_init("http://{$devtoolsHost}:{$devtoolsPort}/json/close/{$targetId}");
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Add timeout to prevent hanging
+
+                    $result = curl_exec($ch);
+                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+                    if ($result === false) {
+                        Minz_Log::error(self::LOG_PREFIX . ': Error closing Chrome tab: ' . curl_error($ch));
+                    } else {
+                        Minz_Log::debug(self::LOG_PREFIX . ': Chrome tab closed successfully (HTTP ' . $httpCode . ')');
+                    }
+
+                    curl_close($ch);
+                } else {
+                    Minz_Log::warning(self::LOG_PREFIX . ': No target ID available for cleanup');
+                }
+            } catch (Exception $e) {
+                Minz_Log::error(self::LOG_PREFIX . ': Error during cleanup: ' . $e->getMessage());
+            }
         }
     }
 
-    private function generateOllamaSummary($content)
+    private function generateOllamaSummary(string $content): string
     {
         Minz_Log::debug(self::LOG_PREFIX . ': Starting Ollama summary generation');
-        
+
         // Validate content
         if (empty($content)) {
             Minz_Log::error(self::LOG_PREFIX . ': Empty content provided to generateOllamaSummary');
             throw new Exception("No content provided for Ollama to summarize");
         }
-        
-        Minz_Log::debug(self::LOG_PREFIX . ': Content length: ' . strlen($content) . ' bytes');
-        
-        $ollamaHost = FreshRSS_Context::$user_conf->freshrss_ollama_ollama_host ?? 'http://localhost:11434';
-        // Strip trailing slash from ollama_host
-        $ollamaHost = rtrim($ollamaHost, '/');
 
+        Minz_Log::debug(self::LOG_PREFIX . ': Content length: ' . strlen($content) . ' bytes');
+
+        $ollamaHost = FreshRSS_Context::$user_conf->freshrss_ollama_ollama_host ?? 'http://localhost:11434';
+        $ollamaHost = rtrim($ollamaHost, '/');
         $ollamaModel = FreshRSS_Context::$user_conf->freshrss_ollama_ollama_model ?? 'llama3';
+
+        // First, check if this is a valid article
+        $validationPrompt = <<<EOT
+Analyze the following content and determine if it is a valid article. A valid article should:
+- Have substantial content (not just a few sentences)
+- Not be a login page, consent screen, or error page
+- Not be a list of links or navigation elements
+- Not be a placeholder or redirect page
+- Not be a captcha or security check page
+
+If the content is NOT a valid article, respond with exactly: INVALID_CONTENT
+If the content IS a valid article, respond with exactly: VALID_CONTENT
+
+Content to analyze:
+$content
+EOT;
+
+        $validationResponse = $this->callOllama($ollamaHost, $ollamaModel, $validationPrompt, false);
+
+        if (trim($validationResponse) === 'INVALID_CONTENT') {
+            Minz_Log::debug(self::LOG_PREFIX . ': Content validation failed - not a valid article');
+            return 'PLACEHOLDER_PAGE';
+        }
+
+        if (trim($validationResponse) !== 'VALID_CONTENT') {
+            Minz_Log::debug(self::LOG_PREFIX . ': Unexpected validation response: ' . $validationResponse);
+            return 'PLACEHOLDER_PAGE';
+        }
+
+        // If we get here, we have a valid article - proceed with summary generation
         $numTags = FreshRSS_Context::$user_conf->freshrss_ollama_num_tags ?? 5;
         $summaryLength = FreshRSS_Context::$user_conf->freshrss_ollama_summary_length ?? 150;
 
-        Minz_Log::debug(self::LOG_PREFIX . ": Ollama settings - Host: $ollamaHost, Model: $ollamaModel");
-
-        // Truncate content if too long (most models have context limits)
-        $maxContent = 4000;
-        if (strlen($content) > $maxContent) {
-            Minz_Log::debug(self::LOG_PREFIX . ": Content too long, truncating from " . strlen($content) . " to $maxContent chars");
-            $content = substr($content, 0, $maxContent);
-        }
-
-        $prompt = <<<EOT
+        $summaryPrompt = <<<EOT
 Based on the following article content, please provide:
 1. A concise summary (around $summaryLength words)
 2. $numTags relevant tags (single words or short phrases)
-
-If it seems like there is no content don't show anything, for example:
-- You see cloudflare (or other protection provider) captcha page or security check page
-- You see cookies consent page
-- You see a placeholder page with a link to the original article
 
 Format your response exactly like this:
 SUMMARY: your summary here
@@ -342,25 +376,30 @@ Article content:
 $content
 EOT;
 
-        $data = [
-            'model' => $ollamaModel,
-            'prompt' => $prompt,
-            'stream' => false
-        ];
+        return $this->callOllama($ollamaHost, $ollamaModel, $summaryPrompt, false);
+    }
 
+    private function callOllama(string $ollamaHost, string $model, string $prompt, bool $stream = false): string
+    {
         $apiEndpoint = "$ollamaHost/api/generate";
         Minz_Log::debug(self::LOG_PREFIX . ": Sending request to Ollama at $apiEndpoint");
-        
+
         // Ensure prompt is properly encoded
-        $data['prompt'] = mb_convert_encoding($data['prompt'], 'UTF-8', 'auto');
-        
+        $prompt = mb_convert_encoding($prompt, 'UTF-8', 'auto');
+
+        $data = [
+            'model' => $model,
+            'prompt' => $prompt,
+            'stream' => $stream
+        ];
+
         // Use JSON_UNESCAPED_UNICODE to properly handle Unicode characters
         $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         Minz_Log::debug(self::LOG_PREFIX . ": Request payload: " . $jsonData);
-        
+
         // Debug data structure before encoding
         Minz_Log::debug(self::LOG_PREFIX . ": Data structure before JSON encoding: " . print_r($data, true));
-        
+
         // Check if JSON encoding succeeded
         if ($jsonData === false) {
             Minz_Log::error(self::LOG_PREFIX . ": JSON encoding failed: " . json_last_error_msg());
@@ -373,9 +412,8 @@ EOT;
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-			// TODO: configurable timeout
             curl_setopt($ch, CURLOPT_TIMEOUT, 600);
-            
+
             // Add verbose debugging for cURL
             $verbose = fopen('php://temp', 'w+');
             curl_setopt($ch, CURLOPT_VERBOSE, true);
@@ -384,12 +422,12 @@ EOT;
             $result = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             Minz_Log::debug(self::LOG_PREFIX . ": Ollama response (HTTP $httpCode): " . substr($result, 0, 500) . "...");
-            
+
             // Log verbose cURL output
             rewind($verbose);
             $verboseLog = stream_get_contents($verbose);
             Minz_Log::debug(self::LOG_PREFIX . ": cURL verbose output: " . $verboseLog);
-            
+
             if ($result === false) {
                 $error = curl_error($ch);
                 curl_close($ch);
@@ -413,9 +451,21 @@ EOT;
         }
     }
 
-    private function updateEntryWithSummary($entry, $ollamaResponse)
+    private function updateEntryWithSummary(FreshRSS_Entry $entry, string $ollamaResponse): void
     {
         Minz_Log::debug(self::LOG_PREFIX . ': Updating entry with summary and tags');
+
+        // Check if this is a placeholder page response
+        if (trim($ollamaResponse) === 'PLACEHOLDER_PAGE') {
+            Minz_Log::debug(self::LOG_PREFIX . ': Detected placeholder page, skipping summary and tags');
+
+            // Add a summary div to prevent reprocessing
+            $content = $entry->content();
+            $updatedContent = $content . '<hr/><div class="ai-summary"><strong>Note:</strong> Summary generation skipped - page appears to be a placeholder, consent screen, or requires authentication.</div><hr>';
+            $entry->_content($updatedContent);
+
+            return;
+        }
 
         // Extract summary and tags from Ollama response
         $summary = '';
@@ -429,14 +479,13 @@ EOT;
             Minz_Log::debug(self::LOG_PREFIX . ': Extracted summary: ' . substr($summary, 0, 100) . '...');
         } else {
             Minz_Log::debug(self::LOG_PREFIX . ': No summary found in response');
-        }
 
-        if (preg_match('/TAGS:\s*(.*?)(?:\r?\n|$)/s', $ollamaResponse, $tagsMatch)) {
-            $tagsList = trim($tagsMatch[1]);
-            $tags = array_map('trim', explode(',', $tagsList));
-            Minz_Log::debug(self::LOG_PREFIX . ': Extracted tags: ' . json_encode($tags));
-        } else {
-            Minz_Log::debug(self::LOG_PREFIX . ': No tags found in response');
+            // Add a summary div to prevent reprocessing even when no valid summary was found
+            $content = $entry->content();
+            $updatedContent = $content . '<hr/><div class="ai-summary"><strong>Note:</strong> Summary generation failed - no valid summary could be extracted from the response.</div><hr>';
+            $entry->_content($updatedContent);
+
+            return;
         }
 
         // Update entry summary if found
@@ -452,28 +501,34 @@ EOT;
         }
 
         // Add tags if found
-        if (!empty($tags)) {
-            $currentTags = $entry->tags();
-            Minz_Log::debug(self::LOG_PREFIX . ': Current tags: ' . json_encode($currentTags));
+        if (preg_match('/TAGS:\s*(.*?)(?:\r?\n|$)/s', $ollamaResponse, $tagsMatch)) {
+            $tagsList = trim($tagsMatch[1]);
+            $tags = array_map('trim', explode(',', $tagsList));
+            Minz_Log::debug(self::LOG_PREFIX . ': Extracted tags: ' . json_encode($tags));
 
-            $addedTags = [];
-            foreach ($tags as $tag) {
-                if (!empty($tag)) {
-                    // Strip any # prefix if it exists and clean the tag
-                    $tag = trim(ltrim(trim($tag), '#'));
+            if (!empty($tags)) {
+                $currentTags = $entry->tags();
+                Minz_Log::debug(self::LOG_PREFIX . ': Current tags: ' . json_encode($currentTags));
+
+                $addedTags = [];
+                foreach ($tags as $tag) {
                     if (!empty($tag)) {
-                        $currentTags[] = $tag;
-                        $addedTags[] = $tag;
+                        // Strip any # prefix if it exists and clean the tag
+                        $tag = trim(ltrim(trim($tag), '#'));
+                        if (!empty($tag)) {
+                            $currentTags[] = $tag;
+                            $addedTags[] = $tag;
+                        }
                     }
                 }
+
+                // Use array_values to reindex the array after array_unique
+                $uniqueTags = array_values(array_unique($currentTags));
+                $entry->_tags($uniqueTags);
+
+                Minz_Log::debug(self::LOG_PREFIX . ': Added tags: ' . json_encode($addedTags));
+                Minz_Log::debug(self::LOG_PREFIX . ': Final tags: ' . json_encode($uniqueTags));
             }
-
-            // Use array_values to reindex the array after array_unique
-            $uniqueTags = array_values(array_unique($currentTags));
-            $entry->_tags($uniqueTags);
-
-            Minz_Log::debug(self::LOG_PREFIX . ': Added tags: ' . json_encode($addedTags));
-            Minz_Log::debug(self::LOG_PREFIX . ': Final tags: ' . json_encode($uniqueTags));
         }
     }
 }

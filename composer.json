@@ -1,0 +1,13 @@
+{
+    "name": "freshrss/ollama-extension",
+    "description": "FreshRSS extension for Ollama integration",
+    "type": "freshrss-extension",
+    "require": {
+        "textalk/websocket": "^1.5"
+    },
+    "autoload-dev": {
+        "classmap": [
+            "vendor/freshrss/lib"
+        ]
+    }
+} 
