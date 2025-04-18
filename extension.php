@@ -29,6 +29,15 @@ declare(strict_types=1);
 
 require_once dirname(__FILE__) . '/../../vendor/autoload.php';
 
+/**
+ * Helper function to escape newlines and carriage returns in strings for logging
+ * @param string $string The string to escape
+ * @return string The escaped string
+ */
+function escapeForLog(string $string): string
+{
+    return str_replace(["\n", "\r"], ['\\n', '\\r'], $string);
+}
 
 class FreshrssOllamaExtension extends Minz_Extension
 {
@@ -89,11 +98,11 @@ class FreshrssOllamaExtension extends Minz_Extension
 
     public function processEntry(FreshRSS_Entry $entry): FreshRSS_Entry
     {
-        Minz_Log::debug(self::LOG_PREFIX . ': Processing entry: ' . json_encode($entry->toArray()));
+        Minz_Log::debug(self::LOG_PREFIX . ': Processing entry: ' . json_encode($entry->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         // Get current tags as an array
         $tags = $entry->tags();
-        Minz_Log::debug(self::LOG_PREFIX . ': Current tags: ' . json_encode($tags));
+        Minz_Log::debug(self::LOG_PREFIX . ': Current tags: ' . json_encode($tags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         // Skip if already processed
         if (in_array('ai-processed', $tags)) {
@@ -162,7 +171,7 @@ class FreshrssOllamaExtension extends Minz_Extension
             throw $e;
         }
 
-        Minz_Log::debug(self::LOG_PREFIX . ': Finished processing entry ' . json_encode($entry->toArray()));
+        Minz_Log::debug(self::LOG_PREFIX . ': Finished processing entry ' . json_encode($entry->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         return $entry;
     }
@@ -191,7 +200,7 @@ class FreshrssOllamaExtension extends Minz_Extension
         $curlError = curl_error($ch);
         curl_close($ch);
 
-        Minz_Log::debug(self::LOG_PREFIX . ': Create new target response: ' . $createResponse);
+        Minz_Log::debug(self::LOG_PREFIX . ': Create new target response: ' . escapeForLog($createResponse));
         if (!$createResponse) {
             throw new Exception('Could not create new tab in Chrome: ' . $curlError);
         }
@@ -227,7 +236,7 @@ class FreshrssOllamaExtension extends Minz_Extension
                 'method' => 'Page.navigate',
                 'params' => ['url' => $url]
             ]);
-            Minz_Log::debug(self::LOG_PREFIX . ': Sending navigation command: ' . $navigateMessage);
+            Minz_Log::debug(self::LOG_PREFIX . ': Sending navigation command: ' . escapeForLog($navigateMessage));
             $client->send($navigateMessage);
 
             // Wait for navigation to complete
@@ -235,7 +244,7 @@ class FreshrssOllamaExtension extends Minz_Extension
             while (!$navigationComplete) {
                 $response = $client->receive();
                 $data = json_decode($response, true);
-                Minz_Log::debug(self::LOG_PREFIX . ': Received response: ' . $response);
+                Minz_Log::debug(self::LOG_PREFIX . ': Received response: ' . escapeForLog($response));
 
                 if (isset($data['method']) && $data['method'] === 'Page.frameStoppedLoading') {
                     $navigationComplete = true;
@@ -258,7 +267,7 @@ class FreshrssOllamaExtension extends Minz_Extension
                     'returnByValue' => true
                 ]
             ]);
-            Minz_Log::debug(self::LOG_PREFIX . ': Sending article evaluation command: ' . $articleEvalMessage);
+            Minz_Log::debug(self::LOG_PREFIX . ': Sending article evaluation command: ' . escapeForLog($articleEvalMessage));
             $client->send($articleEvalMessage);
 
             // Get the evaluation result
@@ -267,7 +276,7 @@ class FreshrssOllamaExtension extends Minz_Extension
             while (!$evalComplete) {
                 $response = $client->receive();
                 $data = json_decode($response, true);
-                Minz_Log::debug(self::LOG_PREFIX . ': Received evaluation response: ' . $response);
+                Minz_Log::debug(self::LOG_PREFIX . ': Received evaluation response: ' . escapeForLog($response));
 
                 if (isset($data['id']) && $data['id'] === 2) {
                     if (isset($data['result']['result']['value'])) {
@@ -398,7 +407,7 @@ EOT;
         Minz_Log::debug(self::LOG_PREFIX . ": Request payload: " . $jsonData);
 
         // Debug data structure before encoding
-        Minz_Log::debug(self::LOG_PREFIX . ": Data structure before JSON encoding: " . print_r($data, true));
+        Minz_Log::debug(self::LOG_PREFIX . ": Data structure before JSON encoding: " . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         // Check if JSON encoding succeeded
         if ($jsonData === false) {
@@ -421,12 +430,12 @@ EOT;
 
             $result = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            Minz_Log::debug(self::LOG_PREFIX . ": Ollama response (HTTP $httpCode): " . substr($result, 0, 500) . "...");
+            Minz_Log::debug(self::LOG_PREFIX . ": Ollama response (HTTP $httpCode): " . escapeForLog(substr($result, 0, 500)) . "...");
 
             // Log verbose cURL output
             rewind($verbose);
             $verboseLog = stream_get_contents($verbose);
-            Minz_Log::debug(self::LOG_PREFIX . ": cURL verbose output: " . $verboseLog);
+            Minz_Log::debug(self::LOG_PREFIX . ": cURL verbose output: " . escapeForLog($verboseLog));
 
             if ($result === false) {
                 $error = curl_error($ch);
@@ -439,7 +448,7 @@ EOT;
             $response = json_decode($result, true);
 
             if (!isset($response['response'])) {
-                Minz_Log::debug(self::LOG_PREFIX . ": Unexpected response format: " . json_encode($response));
+                Minz_Log::debug(self::LOG_PREFIX . ": Unexpected response format: " . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                 throw new Exception("Unexpected response format from Ollama");
             }
 
@@ -472,11 +481,11 @@ EOT;
         $tags = [];
 
         // Parse the response
-        Minz_Log::debug(self::LOG_PREFIX . ': Parsing Ollama response: ' . substr($ollamaResponse, 0, 100) . '...');
+        Minz_Log::debug(self::LOG_PREFIX . ': Parsing Ollama response: ' . escapeForLog(substr($ollamaResponse, 0, 100)) . '...');
 
         if (preg_match('/SUMMARY:\s*(.*?)(?:\r?\n|$)/s', $ollamaResponse, $summaryMatch)) {
             $summary = trim($summaryMatch[1]);
-            Minz_Log::debug(self::LOG_PREFIX . ': Extracted summary: ' . substr($summary, 0, 100) . '...');
+            Minz_Log::debug(self::LOG_PREFIX . ': Extracted summary: ' . escapeForLog(substr($summary, 0, 100)) . '...');
         } else {
             Minz_Log::debug(self::LOG_PREFIX . ': No summary found in response');
 
@@ -504,11 +513,11 @@ EOT;
         if (preg_match('/TAGS:\s*(.*?)(?:\r?\n|$)/s', $ollamaResponse, $tagsMatch)) {
             $tagsList = trim($tagsMatch[1]);
             $tags = array_map('trim', explode(',', $tagsList));
-            Minz_Log::debug(self::LOG_PREFIX . ': Extracted tags: ' . json_encode($tags));
+            Minz_Log::debug(self::LOG_PREFIX . ': Extracted tags: ' . json_encode($tags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
             if (!empty($tags)) {
                 $currentTags = $entry->tags();
-                Minz_Log::debug(self::LOG_PREFIX . ': Current tags: ' . json_encode($currentTags));
+                Minz_Log::debug(self::LOG_PREFIX . ': Current tags: ' . json_encode($currentTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
                 $addedTags = [];
                 foreach ($tags as $tag) {
@@ -526,8 +535,8 @@ EOT;
                 $uniqueTags = array_values(array_unique($currentTags));
                 $entry->_tags($uniqueTags);
 
-                Minz_Log::debug(self::LOG_PREFIX . ': Added tags: ' . json_encode($addedTags));
-                Minz_Log::debug(self::LOG_PREFIX . ': Final tags: ' . json_encode($uniqueTags));
+                Minz_Log::debug(self::LOG_PREFIX . ': Added tags: ' . json_encode($addedTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                Minz_Log::debug(self::LOG_PREFIX . ': Final tags: ' . json_encode($uniqueTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             }
         }
     }
