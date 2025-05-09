@@ -29,15 +29,41 @@ declare(strict_types=1);
 
 require_once dirname(__FILE__) . '/../../vendor/autoload.php';
 require_once dirname(__FILE__) . '/constants.php';
+require_once dirname(__FILE__) . '/Logger.php';
+require_once dirname(__FILE__) . '/WebpageFetcher.php';
+require_once dirname(__FILE__) . '/OllamaClient.php';
 require_once dirname(__FILE__) . '/EntryProcessor.php';
 
 class FreshrssOllamaExtension extends Minz_Extension
 {
+    private ?EntryProcessor $processor = null;
+
     public function init(): void
     {
         Minz_Log::debug(LOG_PREFIX . ': Initializing');
         $this->registerHook('entry_before_insert', array($this, 'processEntry'));
         $this->registerHook('entry_before_display', array($this, 'modifyEntryDisplay'));
+    }
+
+    private function getProcessor(): EntryProcessor
+    {
+        if ($this->processor === null) {
+            $logger = new Logger(LOG_PREFIX);
+            $webpageFetcher = new WebpageFetcher(
+                $logger,
+                FreshRSS_Context::$user_conf->freshrss_ollama_chrome_host ?? 'localhost',
+                FreshRSS_Context::$user_conf->freshrss_ollama_chrome_port ?? 9222
+            );
+            $ollamaClient = new OllamaClientImpl(
+                $logger,
+                FreshRSS_Context::$user_conf->freshrss_ollama_ollama_host ?? 'http://localhost:11434',
+                FreshRSS_Context::$user_conf->freshrss_ollama_ollama_model ?? 'llama3',
+                FreshRSS_Context::$user_conf->freshrss_ollama_model_options ?? [],
+                FreshRSS_Context::$user_conf->freshrss_ollama_context_length ?? 8192
+            );
+            $this->processor = new EntryProcessor($logger, $webpageFetcher, $ollamaClient);
+        }
+        return $this->processor;
     }
 
     public function handleConfigureAction(): void
@@ -79,6 +105,9 @@ class FreshrssOllamaExtension extends Minz_Extension
                     throw new Exception('Failed to save configuration');
                 }
 
+                // Reset processor to use new configuration
+                $this->processor = null;
+
                 Minz_Request::good(_t('feedback.conf.updated'));
             } catch (Exception $e) {
                 Minz_Log::error(LOG_PREFIX . ': Error saving configuration: ' . $e->getMessage());
@@ -103,10 +132,7 @@ class FreshrssOllamaExtension extends Minz_Extension
         }
 
         try {
-            require_once dirname(__FILE__) . '/Logger.php';
-            require_once dirname(__FILE__) . '/WebpageFetcher.php';
-
-            $logger = new Logger();
+            $logger = new Logger(LOG_PREFIX);
             $fetcher = new WebpageFetcher(
                 $logger,
                 FreshRSS_Context::$user_conf->freshrss_ollama_chrome_host ?? 'localhost',
@@ -134,8 +160,7 @@ class FreshrssOllamaExtension extends Minz_Extension
 
     public function processEntry(FreshRSS_Entry $entry): FreshRSS_Entry
     {
-        $processor = new EntryProcessor();
-        return $processor->processEntry($entry);
+        return $this->getProcessor()->processEntry($entry);
     }
 
     public function modifyEntryDisplay(FreshRSS_Entry $entry): FreshRSS_Entry
@@ -146,15 +171,23 @@ class FreshrssOllamaExtension extends Minz_Extension
 
         $content = $entry->content();
         $summary = $entry->attributeString('ai-summary');
-        $debugInfo = json_decode($entry->attributeString('ai-debug'), true);
+        $debugInfo = $entry->attributeString('ai-debug');
 
         if (!empty($summary)) {
             $content .= '<hr/><div class="ai-summary"><strong>Summary:</strong> ' . htmlspecialchars($summary) . '</div><hr>';
         }
 
         if (!empty($debugInfo)) {
-            $content .= '<details class="ai-debug"><summary>Debug Information: Original Content</summary><pre>' . htmlspecialchars($debugInfo['content']) . '</pre></details>';
-            $content .= '<details class="ai-debug"><summary>Debug Information: Ollama Response</summary><pre>' . htmlspecialchars($debugInfo['ollamaResponse']) . '</pre></details>';
+            $debugArray = json_decode($debugInfo, true);
+            if ($debugArray !== null) {
+                $content .= '<details class="ai-debug"><summary>Debug Information: Original Content</summary><pre>' . htmlspecialchars($debugArray['content'] ?? '') . '</pre></details>';
+                
+                $ollamaResponse = $debugArray['ollamaResponse'] ?? '';
+                if (is_array($ollamaResponse)) {
+                    $ollamaResponse = json_encode($ollamaResponse, JSON_PRETTY_PRINT);
+                }
+                $content .= '<details class="ai-debug"><summary>Debug Information: Ollama Response</summary><pre>' . htmlspecialchars($ollamaResponse) . '</pre></details>';
+            }
         }
 
         $entry->_content($content);

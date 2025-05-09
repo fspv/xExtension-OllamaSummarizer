@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.0/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         displayDetailsOnTestsThatTriggerWarnings="true"
+         displayDetailsOnTestsThatTriggerErrors="true"
+         displayDetailsOnTestsThatTriggerNotices="true"
+         displayDetailsOnTestsThatTriggerDeprecations="true"
+         failOnWarning="true"
+         failOnNotice="true"
+         failOnDeprecation="true"
+         failOnEmptyTestSuite="true"
+         failOnRisky="true"
+         failOnSkipped="true"
+         failOnIncomplete="true"
+         stopOnFailure="false"
+         stopOnWarning="false"
+         stopOnIncomplete="false"
+         stopOnSkipped="false"
+         stopOnRisky="false"
+         stopOnDeprecation="false"
+         stopOnError="false"
+         stopOnNotice="false">
+    <testsuites>
+        <testsuite name="FreshRssOllama Test Suite">
+            <directory>.</directory>
+            <exclude>vendor</exclude>
+        </testsuite>
+    </testsuites>
+    <coverage>
+    </coverage>
+</phpunit> 

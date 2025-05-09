@@ -9,25 +9,34 @@
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.49",
         "phpstan/phpstan": "^1.10",
-        "vimeo/psalm": "^5.22"
+        "vimeo/psalm": "^5.22",
+        "phpunit/phpunit": "^10.0"
     },
     "config": {
         "sort-packages": true
     },
     "scripts": {
         "cs": "php-cs-fixer fix",
-        "cs-check": "php-cs-fixer fix --dry-run --diff",
+        "cs-check": "php-cs-fixer fix --dry-run --diff --allow-risky=yes",
         "phpstan": "phpstan analyse",
         "psalm": "psalm",
         "test": [
             "@cs-check",
             "@phpstan",
-            "@psalm"
+            "@psalm",
+            "phpunit"
         ]
     },
     "autoload-dev": {
         "classmap": [
-            "vendor/freshrss/lib"
+            "vendor/freshrss",
+            "vendor/freshrss/lib",
+            "vendor/freshrss/app/Models/",
+            "vendor/freshrss/app/Exceptions/"
+        ],
+        "files": [
+            "vendor/freshrss/constants.php",
+            "vendor/freshrss/lib/lib_rss.php"
         ]
     }
 } 
