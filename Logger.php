@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 /**
- * Helper function to escape newlines and carriage returns in strings for logging
+ * Helper function to escape newlines and carriage returns in strings for logging.
+ *
  * @param string $string The string to escape
+ *
  * @return string The escaped string
  */
 function escapeForLog(string $string): string

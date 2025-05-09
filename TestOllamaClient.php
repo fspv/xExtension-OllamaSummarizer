@@ -8,6 +8,7 @@ require_once dirname(__FILE__) . '/Logger.php';
 class TestOllamaClient implements OllamaClient
 {
     private Logger $logger;
+
     private ?array $response = null;
 
     public function __construct(Logger $logger)
@@ -25,6 +26,7 @@ class TestOllamaClient implements OllamaClient
         if ($this->response === null) {
             throw new RuntimeException('Test response not set. Call setResponse() first.');
         }
+
         return $this->response;
     }
-} 
+}

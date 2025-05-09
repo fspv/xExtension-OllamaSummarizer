@@ -12,11 +12,12 @@ if (file_exists($autoload_path_freshrss)) {
     require_once $autoload_path_local;
 }
 
-
 class WebpageFetcher
 {
     private Logger $logger;
+
     private string $devtoolsHost;
+
     private int $devtoolsPort;
 
     public function __construct(Logger $logger, string $devtoolsHost = 'localhost', int $devtoolsPort = 9222)
@@ -36,7 +37,7 @@ class WebpageFetcher
 
         $ch = curl_init("http://{$this->devtoolsHost}:{$this->devtoolsPort}/json/new");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT"); // Using PUT method instead of GET
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT'); // Using PUT method instead of GET
         $createResponse = curl_exec($ch);
         $curlError = curl_error($ch);
         curl_close($ch);
@@ -75,7 +76,7 @@ class WebpageFetcher
             $navigateMessage = json_encode([
                 'id' => 1,
                 'method' => 'Page.navigate',
-                'params' => ['url' => $url]
+                'params' => ['url' => $url],
             ]);
             $this->logger->debug('Sending navigation command: ' . $navigateMessage);
             $client->send($navigateMessage);
@@ -105,8 +106,8 @@ class WebpageFetcher
                 'method' => 'Runtime.evaluate',
                 'params' => [
                     'expression' => 'document.querySelector("' . $path . '")?.innerText || document.body.innerText',
-                    'returnByValue' => true
-                ]
+                    'returnByValue' => true,
+                ],
             ]);
             $this->logger->debug('Sending article evaluation command: ' . $articleEvalMessage);
             $client->send($articleEvalMessage);

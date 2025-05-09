@@ -10,7 +10,9 @@ require_once dirname(__FILE__) . '/OllamaClient.php';
 class EntryProcessor
 {
     private Logger $logger;
+
     private WebpageFetcher $webpageFetcher;
+
     private OllamaClient $ollamaClient;
 
     public function __construct(
@@ -43,7 +45,7 @@ class EntryProcessor
                     $this->logger->debug('Current tags: ' . json_encode($currentTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
                     foreach ($savedTags as $tag) {
-                        if (!empty($tag) && !in_array($tag, $currentTags)) {
+                        if (!empty($tag) && !in_array($tag, $currentTags, true)) {
                             $currentTags[] = $tag;
                         }
                     }
@@ -58,6 +60,7 @@ class EntryProcessor
 
         if ($entry->isUpdated()) {
             $this->logger->debug('Entry is updated, skipping');
+
             return $entry;
         }
 
@@ -65,6 +68,7 @@ class EntryProcessor
 
         if (empty($url)) {
             $this->logger->debug('No URL found, skipping');
+
             return $entry;
         }
 
@@ -101,7 +105,7 @@ class EntryProcessor
 
             $debugInfo = [
                 'content' => $content,
-                'ollamaResponse' => $result ?? null
+                'ollamaResponse' => $result ?? null,
             ];
             $entry->_attribute('ai-debug', json_encode($debugInfo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 

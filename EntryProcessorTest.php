@@ -18,8 +18,11 @@ require_once dirname(__FILE__) . '/EntryInterface.php';
 class EntryProcessorTest extends TestCase
 {
     private EntryProcessor $processor;
+
     private TestOllamaClient $ollamaClient;
+
     private TestWebpageFetcher $webpageFetcher;
+
     private Logger $logger;
 
     protected function setUp(): void
@@ -43,7 +46,7 @@ class EntryProcessorTest extends TestCase
         $this->webpageFetcher->setResponse('This is the full article content');
         $this->ollamaClient->setResponse([
             'summary' => 'This is a summary of the article',
-            'tags' => ['test', 'article']
+            'tags' => ['test', 'article'],
         ]);
 
         // Process the entry
@@ -102,7 +105,7 @@ class EntryProcessorTest extends TestCase
     {
         // Create a test entry with a custom feed selector
         $entry = $this->createTestEntry('https://example.com/article', 'Test Article');
-        $feed = new FreshRSS_Feed("https://example.com/feed");
+        $feed = new FreshRSS_Feed('https://example.com/feed');
         $feed->_pathEntries('.custom-article');
         $entry->_feed($feed);
 
@@ -110,7 +113,7 @@ class EntryProcessorTest extends TestCase
         $this->webpageFetcher->setResponse('This is the full article content');
         $this->ollamaClient->setResponse([
             'summary' => 'This is a summary of the article',
-            'tags' => ['test', 'article']
+            'tags' => ['test', 'article'],
         ]);
 
         // Process the entry
@@ -130,7 +133,8 @@ class EntryProcessorTest extends TestCase
         $entry->_guid(uniqid('test_', true));
         $entry->_content('Test content');
         $entry->_tags([]);
-        $entry->_feed(new FreshRSS_Feed("https://example.com/feed"));
+        $entry->_feed(new FreshRSS_Feed('https://example.com/feed'));
+
         return $entry;
     }
-} 
+}

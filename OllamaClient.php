@@ -5,13 +5,15 @@ declare(strict_types=1);
 interface OllamaClient
 {
     /**
-     * Generate a summary and tags for the given content
-     * 
-     * @param string $content The content to summarize
-     * @param int $summaryLength The desired length of the summary in words
-     * @param int $numTags The number of tags to generate
-     * @return array{summary: string, tags: string[]} The generated summary and tags
+     * Generate a summary and tags for the given content.
+     *
+     * @param string $content       The content to summarize
+     * @param int    $summaryLength The desired length of the summary in words
+     * @param int    $numTags       The number of tags to generate
+     *
      * @throws Exception If the generation fails
+     *
+     * @return array{summary: string, tags: string[]} The generated summary and tags
      */
     public function generateSummary(string $content, int $summaryLength = 150, int $numTags = 5): array;
 }
@@ -19,9 +21,13 @@ interface OllamaClient
 class OllamaClientImpl implements OllamaClient
 {
     private Logger $logger;
+
     private string $ollamaHost;
+
     private string $ollamaModel;
+
     private array $modelOptions;
+
     private int $promptLengthLimit;
 
     public function __construct(
@@ -44,7 +50,8 @@ class OllamaClientImpl implements OllamaClient
 
         if (empty($content)) {
             $this->logger->error('Empty content provided to generateSummary');
-            throw new Exception("No content provided for Ollama to summarize");
+
+            throw new Exception('No content provided for Ollama to summarize');
         }
 
         $this->logger->debug('Content length: ' . strlen($content) . ' bytes');
@@ -60,7 +67,7 @@ EOT;
 
         // Truncate prompt if it exceeds the limit
         if (strlen($summaryPrompt) > $this->promptLengthLimit) {
-            $this->logger->debug("Prompt length (" . strlen($summaryPrompt) . ") exceeds limit ({$this->promptLengthLimit}), truncating");
+            $this->logger->debug('Prompt length (' . strlen($summaryPrompt) . ") exceeds limit ({$this->promptLengthLimit}), truncating");
             $summaryPrompt = substr($summaryPrompt, 0, $this->promptLengthLimit);
             $summaryPrompt .= "\n\n[Content truncated due to length limit]";
         }
@@ -71,33 +78,33 @@ EOT;
             'properties' => [
                 'summary' => [
                     'type' => 'string',
-                    'description' => 'A concise summary of the article'
+                    'description' => 'A concise summary of the article',
                 ],
                 'tags' => [
                     'type' => 'array',
                     'items' => [
-                        'type' => 'string'
+                        'type' => 'string',
                     ],
-                    'description' => 'Relevant tags for the article'
-                ]
+                    'description' => 'Relevant tags for the article',
+                ],
             ],
-            'required' => ['summary', 'tags']
+            'required' => ['summary', 'tags'],
         ];
 
         $response = $this->callOllama($summaryPrompt, $format);
         $responseData = json_decode($response, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception("Invalid JSON response: " . json_last_error_msg());
+            throw new Exception('Invalid JSON response: ' . json_last_error_msg());
         }
 
         if (!isset($responseData['summary']) || !isset($responseData['tags'])) {
-            throw new Exception("Missing required fields in response");
+            throw new Exception('Missing required fields in response');
         }
 
         return [
             'summary' => trim($responseData['summary']),
-            'tags' => array_map('trim', $responseData['tags'])
+            'tags' => array_map('trim', $responseData['tags']),
         ];
     }
 
@@ -112,23 +119,24 @@ EOT;
         $data = [
             'model' => $this->ollamaModel,
             'prompt' => $prompt,
-            'stream' => false
+            'stream' => false,
         ];
 
         if (!empty($this->modelOptions)) {
             $data['options'] = $this->modelOptions;
-            $this->logger->debug("Using model options: " . json_encode($this->modelOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            $this->logger->debug('Using model options: ' . json_encode($this->modelOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
 
         if ($format !== null) {
             $data['format'] = $format;
-            $this->logger->debug("Using format: " . json_encode($format, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            $this->logger->debug('Using format: ' . json_encode($format, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
 
         $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($jsonData === false) {
-            $this->logger->error("JSON encoding failed: " . json_last_error_msg());
-            throw new Exception("Failed to encode request data as JSON: " . json_last_error_msg());
+            $this->logger->error('JSON encoding failed: ' . json_last_error_msg());
+
+            throw new Exception('Failed to encode request data as JSON: ' . json_last_error_msg());
         }
 
         try {
@@ -145,16 +153,17 @@ EOT;
 
             $result = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $this->logger->debug("Ollama response (HTTP $httpCode): " . substr($result, 0, 500) . "...");
+            $this->logger->debug("Ollama response (HTTP $httpCode): " . substr($result, 0, 500) . '...');
 
             rewind($verbose);
             $verboseLog = stream_get_contents($verbose);
-            $this->logger->debug("cURL verbose output: " . $verboseLog);
+            $this->logger->debug('cURL verbose output: ' . $verboseLog);
 
             if ($result === false) {
                 $error = curl_error($ch);
                 curl_close($ch);
-                throw new Exception("Failed to connect to Ollama service: " . $error);
+
+                throw new Exception('Failed to connect to Ollama service: ' . $error);
             }
 
             curl_close($ch);
@@ -162,15 +171,18 @@ EOT;
             $response = json_decode($result, true);
 
             if (!isset($response['response'])) {
-                $this->logger->debug("Unexpected response format: " . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-                throw new Exception("Unexpected response format from Ollama");
+                $this->logger->debug('Unexpected response format: ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+                throw new Exception('Unexpected response format from Ollama');
             }
 
-            $this->logger->debug("Received Ollama response, length: " . strlen($response['response']));
+            $this->logger->debug('Received Ollama response, length: ' . strlen($response['response']));
+
             return $response['response'] ?? '';
         } catch (Exception $e) {
-            $this->logger->error("Ollama error: " . $e->getMessage());
+            $this->logger->error('Ollama error: ' . $e->getMessage());
+
             throw $e;
         }
     }
-} 
+}

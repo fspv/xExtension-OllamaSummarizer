@@ -23,6 +23,7 @@ class TestWebpageFetcher extends WebpageFetcher
         if ($this->response === null) {
             throw new RuntimeException('Test response not set. Call setResponse() first.');
         }
+
         return $this->response;
     }
-} 
+}

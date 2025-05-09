@@ -5,7 +5,9 @@ declare(strict_types=1);
 class TestFreshRSSEntry extends FreshRSS_Entry
 {
     private array $attributes = [];
+
     private bool $isUpdated = false;
+
     private ?FreshRSS_Feed $feed = null;
 
     public function _attribute(string $name, $value = null): void
@@ -20,12 +22,12 @@ class TestFreshRSSEntry extends FreshRSS_Entry
 
     public function attributeString(string $name): string
     {
-        return (string)($this->attributes[$name] ?? '');
+        return (string) ($this->attributes[$name] ?? '');
     }
 
     public function attributeArray(string $name): array
     {
-        return (array)($this->attributes[$name] ?? []);
+        return (array) ($this->attributes[$name] ?? []);
     }
 
     public function _isUpdated(bool $isUpdated): void
@@ -57,7 +59,7 @@ class TestFreshRSSEntry extends FreshRSS_Entry
             'content' => $this->content(),
             'tags' => $this->tags(),
             'attributes' => $this->attributes,
-            'isUpdated' => $this->isUpdated
+            'isUpdated' => $this->isUpdated,
         ];
     }
 }
@@ -75,4 +77,4 @@ class TestFreshRSSFeed
     {
         $this->pathEntries = $pathEntries;
     }
-} 
+}

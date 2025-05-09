@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Name: Ollama Summarizer
  * Author: Pavel Safronov
  * Description: Fetches article content using Chrome and uses Ollama to generate tags and summaries
- * Version: 0.1.1
+ * Version: 0.1.1.
  */
 
 // Extensions guide
@@ -41,8 +41,8 @@ class FreshrssOllamaExtension extends Minz_Extension
     public function init(): void
     {
         Minz_Log::debug(LOG_PREFIX . ': Initializing');
-        $this->registerHook('entry_before_insert', array($this, 'processEntry'));
-        $this->registerHook('entry_before_display', array($this, 'modifyEntryDisplay'));
+        $this->registerHook('entry_before_insert', [$this, 'processEntry']);
+        $this->registerHook('entry_before_display', [$this, 'modifyEntryDisplay']);
     }
 
     private function getProcessor(): EntryProcessor
@@ -63,6 +63,7 @@ class FreshrssOllamaExtension extends Minz_Extension
             );
             $this->processor = new EntryProcessor($logger, $webpageFetcher, $ollamaClient);
         }
+
         return $this->processor;
     }
 
@@ -122,12 +123,14 @@ class FreshrssOllamaExtension extends Minz_Extension
     {
         if (!Minz_Request::isPost()) {
             Minz_Request::bad(_t('feedback.access.denied'));
+
             return;
         }
 
         $url = Minz_Request::paramString('url');
         if (empty($url)) {
             Minz_Request::bad(_t('feedback.invalid_url'));
+
             return;
         }
 
@@ -144,7 +147,7 @@ class FreshrssOllamaExtension extends Minz_Extension
             header('Content-Type: application/json');
             echo json_encode([
                 'success' => true,
-                'content' => $content
+                'content' => $content,
             ]);
             exit;
         } catch (Exception $e) {
@@ -152,7 +155,7 @@ class FreshrssOllamaExtension extends Minz_Extension
             header('Content-Type: application/json');
             echo json_encode([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
             exit;
         }
@@ -181,7 +184,7 @@ class FreshrssOllamaExtension extends Minz_Extension
             $debugArray = json_decode($debugInfo, true);
             if ($debugArray !== null) {
                 $content .= '<details class="ai-debug"><summary>Debug Information: Original Content</summary><pre>' . htmlspecialchars($debugArray['content'] ?? '') . '</pre></details>';
-                
+
                 $ollamaResponse = $debugArray['ollamaResponse'] ?? '';
                 if (is_array($ollamaResponse)) {
                     $ollamaResponse = json_encode($ollamaResponse, JSON_PRETTY_PRINT);
@@ -191,6 +194,7 @@ class FreshrssOllamaExtension extends Minz_Extension
         }
 
         $entry->_content($content);
+
         return $entry;
     }
 }
