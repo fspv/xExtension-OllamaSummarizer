@@ -37,6 +37,7 @@ class FreshrssOllamaExtension extends Minz_Extension
     {
         Minz_Log::debug(LOG_PREFIX . ': Initializing');
         $this->registerHook('entry_before_insert', array($this, 'processEntry'));
+        $this->registerHook('entry_before_display', array($this, 'modifyEntryDisplay'));
     }
 
     public function handleConfigureAction(): void
@@ -48,12 +49,13 @@ class FreshrssOllamaExtension extends Minz_Extension
             Minz_Log::debug(LOG_PREFIX . ': Processing configuration form submission');
 
             // Get and log form values
-            $chrome_host = Minz_Request::paramString('chrome_host', 'localhost');
-            $chrome_port = Minz_Request::paramInt('chrome_port', 9222);
-            $ollama_host = Minz_Request::paramString('ollama_host', 'http://localhost:11434');
-            $ollama_model = Minz_Request::paramString('ollama_model', 'llama3');
-            $num_tags = Minz_Request::paramInt('num_tags', 5);
-            $summary_length = Minz_Request::paramInt('summary_length', 150);
+            $chrome_host = Minz_Request::paramString('chrome_host');
+            $chrome_port = Minz_Request::paramInt('chrome_port');
+            $ollama_host = Minz_Request::paramString('ollama_host');
+            $ollama_model = Minz_Request::paramString('ollama_model');
+            $num_tags = Minz_Request::paramInt('num_tags');
+            $summary_length = Minz_Request::paramInt('summary_length');
+            $context_length = Minz_Request::paramInt('context_length');
 
             // Strip trailing slash from ollama_host
             $ollama_host = rtrim($ollama_host, '/');
@@ -67,6 +69,7 @@ class FreshrssOllamaExtension extends Minz_Extension
             FreshRSS_Context::$user_conf->freshrss_ollama_ollama_model = $ollama_model;
             FreshRSS_Context::$user_conf->freshrss_ollama_num_tags = $num_tags;
             FreshRSS_Context::$user_conf->freshrss_ollama_summary_length = $summary_length;
+            FreshRSS_Context::$user_conf->freshrss_ollama_context_length = $context_length;
 
             try {
                 $saved = FreshRSS_Context::$user_conf->save();
@@ -86,9 +89,75 @@ class FreshrssOllamaExtension extends Minz_Extension
         }
     }
 
+    public function handleTestFetchAction(): void
+    {
+        if (!Minz_Request::isPost()) {
+            Minz_Request::bad(_t('feedback.access.denied'));
+            return;
+        }
+
+        $url = Minz_Request::paramString('url');
+        if (empty($url)) {
+            Minz_Request::bad(_t('feedback.invalid_url'));
+            return;
+        }
+
+        try {
+            require_once dirname(__FILE__) . '/Logger.php';
+            require_once dirname(__FILE__) . '/WebpageFetcher.php';
+
+            $logger = new Logger();
+            $fetcher = new WebpageFetcher(
+                $logger,
+                FreshRSS_Context::$user_conf->freshrss_ollama_chrome_host ?? 'localhost',
+                FreshRSS_Context::$user_conf->freshrss_ollama_chrome_port ?? 9222
+            );
+
+            $content = $fetcher->fetchContent($url);
+
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'content' => $content
+            ]);
+            exit;
+        } catch (Exception $e) {
+            Minz_Log::error(LOG_PREFIX . ': Error testing fetch: ' . $e->getMessage());
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+            exit;
+        }
+    }
+
     public function processEntry(FreshRSS_Entry $entry): FreshRSS_Entry
     {
         $processor = new EntryProcessor();
         return $processor->processEntry($entry);
+    }
+
+    public function modifyEntryDisplay(FreshRSS_Entry $entry): FreshRSS_Entry
+    {
+        if (!$entry->hasAttribute('ai-processed')) {
+            return $entry;
+        }
+
+        $content = $entry->content();
+        $summary = $entry->attributeString('ai-summary');
+        $debugInfo = json_decode($entry->attributeString('ai-debug'), true);
+
+        if (!empty($summary)) {
+            $content .= '<hr/><div class="ai-summary"><strong>Summary:</strong> ' . htmlspecialchars($summary) . '</div><hr>';
+        }
+
+        if (!empty($debugInfo)) {
+            $content .= '<details class="ai-debug"><summary>Debug Information: Original Content</summary><pre>' . htmlspecialchars($debugInfo['content']) . '</pre></details>';
+            $content .= '<details class="ai-debug"><summary>Debug Information: Ollama Response</summary><pre>' . htmlspecialchars($debugInfo['ollamaResponse']) . '</pre></details>';
+        }
+
+        $entry->_content($content);
+        return $entry;
     }
 }

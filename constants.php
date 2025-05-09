@@ -2,4 +2,4 @@
 
 declare(strict_types=1);
 
-const LOG_PREFIX = '[extension:OllamaSummarizer]'; 
+const LOG_PREFIX = '[extension:OllamaSummarizer]';

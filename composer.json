@@ -1,9 +1,29 @@
 {
     "name": "freshrss/ollama-extension",
-    "description": "FreshRSS extension for Ollama integration",
+    "description": "FreshRSS extension for generating summaries and tags using Ollama",
     "type": "freshrss-extension",
     "require": {
+        "php": ">=8.1",
         "textalk/websocket": "^1.5"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.49",
+        "phpstan/phpstan": "^1.10",
+        "vimeo/psalm": "^5.22"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "scripts": {
+        "cs": "php-cs-fixer fix",
+        "cs-check": "php-cs-fixer fix --dry-run --diff",
+        "phpstan": "phpstan analyse",
+        "psalm": "psalm",
+        "test": [
+            "@cs-check",
+            "@phpstan",
+            "@psalm"
+        ]
     },
     "autoload-dev": {
         "classmap": [

@@ -1,0 +1,16 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+- Use PHP 8.3+ features where appropriate
+- The code should be strictly typed by using PHP type hints and with `declare(strict_types=1);`
+- Always use explicit return type declarations
+- Use appropriate PHP type hints for method parameters
+- Document complex types in PHPDoc blocks
+- Provide complete documentation for classes, methods, and properties
+- Document parameters with correct types and descriptions
+- Include `@return`, `@throws`, and `@deprecated` tags as needed
+- Everything should be thorougly logged with the debug log level with all the detail to debug the potential problem included in the log line
+- Favor functional paradigms over object-oriented ones, favor composition over inheritance
+- Follow PCR-12 coding standards

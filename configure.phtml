@@ -53,6 +53,22 @@
         </div>
     </div>
 
+    <div class="form-group">
+        <label class="group-name" for="prompt_length_limit"><?php echo _t('Prompt Length Limit'); ?></label>
+        <div class="group-controls">
+            <input type="number" name="prompt_length_limit" id="prompt_length_limit" min="1024" max="32768" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_prompt_length_limit ?? 8192; ?>" />
+            <p class="help"><?php echo _t('Maximum length of the prompt in characters (default: 8192, approximately 2048 tokens)'); ?></p>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-name" for="context_length"><?php echo _t('Context Length'); ?></label>
+        <div class="group-controls">
+            <input type="number" name="context_length" id="context_length" min="1024" max="32768" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_context_length ?? 4096; ?>" />
+            <p class="help"><?php echo _t('Context length for the model in tokens (default: 4096)'); ?></p>
+        </div>
+    </div>
+
     <div class="form-group form-actions">
         <div class="group-controls">
             <button type="submit" class="btn btn-important"><?php echo _t('Save'); ?></button>
