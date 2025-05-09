@@ -76,7 +76,11 @@ class EntryProcessor
             $this->logger->debug('Fetching content for URL: ' . $url);
 
             // Fetch full content using Chrome with WebSocket
-            $content = $this->webpageFetcher->fetchContent($url, $entry->feed()->pathEntries() ?: 'article');
+            $feed = $entry->feed();
+            if ($feed === null) {
+                throw new Exception('Feed is null for entry');
+            }
+            $content = $this->webpageFetcher->fetchContent($url, $feed->pathEntries() ?: 'article');
             $ollamaResponse = '';
 
             if (!empty($content)) {
@@ -84,18 +88,22 @@ class EntryProcessor
 
                 // Generate tags and summary using Ollama
                 $this->logger->debug('Sending content to Ollama');
-                $summaryLength = FreshRSS_Context::$user_conf->freshrss_ollama_summary_length ?? 150;
-                $numTags = FreshRSS_Context::$user_conf->freshrss_ollama_num_tags ?? 5;
+                $userConf = FreshRSS_Context::$user_conf;
+                if ($userConf === null) {
+                    throw new Exception('User configuration is null');
+                }
+                $summaryLength = $userConf->attributeInt('freshrss_ollama_summary_length') ?? 150;
+                $numTags = $userConf->attributeInt('freshrss_ollama_num_tags') ?? 5;
                 $result = $this->ollamaClient->generateSummary($content, $summaryLength, $numTags);
 
-                if (!empty($result)) {
+                if (empty($result['summary']) || empty($result['tags'])) {
+                    $this->logger->debug('Empty response from Ollama');
+                } else {
                     $this->logger->debug('Ollama response received');
 
                     // Update the entry with tags and summary
                     $this->logger->debug('Updating entry with summary and tags');
                     $this->updateEntryWithSummary($entry, $result);
-                } else {
-                    $this->logger->debug('Empty response from Ollama');
                 }
             } else {
                 $this->logger->debug('No content fetched from URL');
@@ -126,10 +134,10 @@ class EntryProcessor
         $tag = mb_strtolower($tag, 'UTF-8');
 
         // Remove any non-English characters and non-spaces
-        $tag = preg_replace('/[^a-z\s]/', '', $tag);
+        $tag = preg_replace('/[^a-z\s]/', '', $tag) ?? '';
 
         // Remove extra spaces and trim
-        $tag = preg_replace('/\s+/', ' ', $tag);
+        $tag = preg_replace('/\s+/', ' ', $tag) ?? '';
         $tag = trim($tag);
 
         return $tag;

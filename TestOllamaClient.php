@@ -27,6 +27,15 @@ class TestOllamaClient implements OllamaClient
             throw new RuntimeException('Test response not set. Call setResponse() first.');
         }
 
-        return $this->response;
+        $this->logger->debug('Generating summary with test response');
+
+        if (!isset($this->response['summary']) || !isset($this->response['tags'])) {
+            throw new RuntimeException('Test response must contain "summary" and "tags" keys');
+        }
+
+        return [
+            'summary' => $this->response['summary'],
+            'tags' => $this->response['tags'],
+        ];
     }
 }

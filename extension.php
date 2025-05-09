@@ -27,7 +27,15 @@ declare(strict_types=1);
 // nix-shell -p php83Packages.composer --pure --run 'composer install'
 // git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
 
-require_once dirname(__FILE__) . '/../../vendor/autoload.php';
+$relativeAutoloadFile = dirname(__FILE__) . '/../../vendor/autoload.php';
+$topLevelAutoloadFile = dirname(__FILE__) . '/vendor/autoload.php';
+
+if (file_exists($relativeAutoloadFile)) {
+    require_once $relativeAutoloadFile;
+} elseif (file_exists($topLevelAutoloadFile)) {
+    require_once $topLevelAutoloadFile;
+}
+
 require_once dirname(__FILE__) . '/constants.php';
 require_once dirname(__FILE__) . '/Logger.php';
 require_once dirname(__FILE__) . '/WebpageFetcher.php';
@@ -49,17 +57,21 @@ class FreshrssOllamaExtension extends Minz_Extension
     {
         if ($this->processor === null) {
             $logger = new Logger(LOG_PREFIX);
+            $userConf = FreshRSS_Context::$user_conf;
+            if ($userConf === null) {
+                throw new Exception('User configuration is null');
+            }
             $webpageFetcher = new WebpageFetcher(
                 $logger,
-                FreshRSS_Context::$user_conf->freshrss_ollama_chrome_host ?? 'localhost',
-                FreshRSS_Context::$user_conf->freshrss_ollama_chrome_port ?? 9222
+                $userConf->attributeString('freshrss_ollama_chrome_host') ?? 'localhost',
+                $userConf->attributeInt('freshrss_ollama_chrome_port') ?? 9222
             );
             $ollamaClient = new OllamaClientImpl(
                 $logger,
-                FreshRSS_Context::$user_conf->freshrss_ollama_ollama_host ?? 'http://localhost:11434',
-                FreshRSS_Context::$user_conf->freshrss_ollama_ollama_model ?? 'llama3',
-                FreshRSS_Context::$user_conf->freshrss_ollama_model_options ?? [],
-                FreshRSS_Context::$user_conf->freshrss_ollama_context_length ?? 8192
+                $userConf->attributeString('freshrss_ollama_ollama_host') ?? 'http://localhost:11434',
+                $userConf->attributeString('freshrss_ollama_ollama_model') ?? 'llama3',
+                $userConf->attributeArray('freshrss_ollama_model_options') ?? [],
+                $userConf->attributeInt('freshrss_ollama_context_length') ?? 8192
             );
             $this->processor = new EntryProcessor($logger, $webpageFetcher, $ollamaClient);
         }
@@ -90,16 +102,20 @@ class FreshrssOllamaExtension extends Minz_Extension
             Minz_Log::debug(LOG_PREFIX . ": Config values - Chrome: $chrome_host:$chrome_port, Ollama: $ollama_host, Model: $ollama_model");
 
             // Save configuration
-            FreshRSS_Context::$user_conf->freshrss_ollama_chrome_host = $chrome_host;
-            FreshRSS_Context::$user_conf->freshrss_ollama_chrome_port = $chrome_port;
-            FreshRSS_Context::$user_conf->freshrss_ollama_ollama_host = $ollama_host;
-            FreshRSS_Context::$user_conf->freshrss_ollama_ollama_model = $ollama_model;
-            FreshRSS_Context::$user_conf->freshrss_ollama_num_tags = $num_tags;
-            FreshRSS_Context::$user_conf->freshrss_ollama_summary_length = $summary_length;
-            FreshRSS_Context::$user_conf->freshrss_ollama_context_length = $context_length;
+            $userConf = FreshRSS_Context::$user_conf;
+            if ($userConf === null) {
+                throw new Exception('User configuration is null');
+            }
+            $userConf->_attribute('freshrss_ollama_chrome_host', $chrome_host);
+            $userConf->_attribute('freshrss_ollama_chrome_port', $chrome_port);
+            $userConf->_attribute('freshrss_ollama_ollama_host', $ollama_host);
+            $userConf->_attribute('freshrss_ollama_ollama_model', $ollama_model);
+            $userConf->_attribute('freshrss_ollama_num_tags', $num_tags);
+            $userConf->_attribute('freshrss_ollama_summary_length', $summary_length);
+            $userConf->_attribute('freshrss_ollama_context_length', $context_length);
 
             try {
-                $saved = FreshRSS_Context::$user_conf->save();
+                $saved = $userConf->save();
                 Minz_Log::debug(LOG_PREFIX . ': Configuration saved: ' . ($saved ? 'success' : 'failed'));
 
                 if (!$saved) {
@@ -109,10 +125,10 @@ class FreshrssOllamaExtension extends Minz_Extension
                 // Reset processor to use new configuration
                 $this->processor = null;
 
-                Minz_Request::good(_t('feedback.conf.updated'));
+                Minz_Request::good(Minz_Translate::t('feedback.conf.updated'));
             } catch (Exception $e) {
                 Minz_Log::error(LOG_PREFIX . ': Error saving configuration: ' . $e->getMessage());
-                Minz_Request::bad(_t('feedback.conf.error'));
+                Minz_Request::bad(Minz_Translate::t('feedback.conf.error'));
             }
         } else {
             Minz_Log::debug(LOG_PREFIX . ': Displaying configuration form');
@@ -122,27 +138,31 @@ class FreshrssOllamaExtension extends Minz_Extension
     public function handleTestFetchAction(): void
     {
         if (!Minz_Request::isPost()) {
-            Minz_Request::bad(_t('feedback.access.denied'));
+            Minz_Request::bad(Minz_Translate::t('feedback.access.denied'));
 
             return;
         }
 
         $url = Minz_Request::paramString('url');
         if (empty($url)) {
-            Minz_Request::bad(_t('feedback.invalid_url'));
+            Minz_Request::bad(Minz_Translate::t('feedback.invalid_url'));
 
             return;
         }
 
         try {
             $logger = new Logger(LOG_PREFIX);
+            $userConf = FreshRSS_Context::$user_conf;
+            if ($userConf === null) {
+                throw new Exception('User configuration is null');
+            }
             $fetcher = new WebpageFetcher(
                 $logger,
-                FreshRSS_Context::$user_conf->freshrss_ollama_chrome_host ?? 'localhost',
-                FreshRSS_Context::$user_conf->freshrss_ollama_chrome_port ?? 9222
+                $userConf->attributeString('freshrss_ollama_chrome_host') ?? 'localhost',
+                $userConf->attributeInt('freshrss_ollama_chrome_port') ?? 9222
             );
 
-            $content = $fetcher->fetchContent($url);
+            $content = $fetcher->fetchContent($url, 'article');
 
             header('Content-Type: application/json');
             echo json_encode([

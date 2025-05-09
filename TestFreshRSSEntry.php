@@ -10,29 +10,29 @@ class TestFreshRSSEntry extends FreshRSS_Entry
 
     private ?FreshRSS_Feed $feed = null;
 
-    public function _attribute(string $name, $value = null): void
+    public function _attribute(string $key, $value = null): void
     {
-        $this->attributes[$name] = $value;
+        $this->attributes[$key] = $value;
     }
 
-    public function hasAttribute(string $name): bool
+    public function hasAttribute(string $key): bool
     {
-        return isset($this->attributes[$name]);
+        return isset($this->attributes[$key]);
     }
 
-    public function attributeString(string $name): string
+    public function attributeString(string $key): string
     {
-        return (string) ($this->attributes[$name] ?? '');
+        return (string) ($this->attributes[$key] ?? '');
     }
 
-    public function attributeArray(string $name): array
+    public function attributeArray(string $key): array
     {
-        return (array) ($this->attributes[$name] ?? []);
+        return (array) ($this->attributes[$key] ?? []);
     }
 
-    public function _isUpdated(bool $isUpdated): void
+    public function _isUpdated(bool $value): void
     {
-        $this->isUpdated = $isUpdated;
+        $this->isUpdated = $value;
     }
 
     public function isUpdated(): bool
@@ -53,13 +53,22 @@ class TestFreshRSSEntry extends FreshRSS_Entry
     public function toArray(): array
     {
         return [
-            'link' => $this->link(),
-            'title' => $this->title(),
+            'id' => (string) $this->id(),
             'guid' => $this->guid(),
+            'title' => $this->title(),
+            'author' => $this->author(),
             'content' => $this->content(),
-            'tags' => $this->tags(),
+            'link' => $this->link(),
+            'date' => (int) $this->date(),
+            'lastSeen' => $this->lastSeen(),
             'attributes' => $this->attributes,
             'isUpdated' => $this->isUpdated,
+            'hash' => $this->hash(),
+            'is_read' => $this->isRead(),
+            'is_favorite' => $this->isFavorite(),
+            'id_feed' => $this->feed()?->id() ?? 0,
+            'feed' => $this->feed(),
+            'tags' => '',
         ];
     }
 }

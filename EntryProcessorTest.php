@@ -30,6 +30,21 @@ class EntryProcessorTest extends TestCase
         $this->logger = new Logger('test');
         $this->ollamaClient = new TestOllamaClient($this->logger);
         $this->webpageFetcher = new TestWebpageFetcher($this->logger);
+
+        // Set up mock user configuration
+        $userConf = new class () {
+            public function attributeInt(string $key): ?int
+            {
+                return match ($key) {
+                    'freshrss_ollama_summary_length' => 150,
+                    'freshrss_ollama_num_tags' => 5,
+                    default => null
+                };
+            }
+        };
+        $userConf = FreshRSS_UserConfiguration::init(dirname(__FILE__) . '/config-user.default.php');
+        FreshRSS_Context::$user_conf = $userConf;
+
         $this->processor = new EntryProcessor(
             $this->logger,
             $this->webpageFetcher,

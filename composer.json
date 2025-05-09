@@ -36,6 +36,7 @@
         ],
         "files": [
             "vendor/freshrss/constants.php",
+            "vendor/freshrss/lib/Minz/Translate.php",
             "vendor/freshrss/lib/lib_rss.php"
         ]
     }

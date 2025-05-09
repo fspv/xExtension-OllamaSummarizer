@@ -47,7 +47,10 @@ class WebpageFetcher
             throw new Exception('Could not create new tab in Chrome: ' . $curlError);
         }
 
-        $newTarget = json_decode($createResponse, true);
+        $newTarget = json_decode((string) $createResponse, true);
+        if ($newTarget === null) {
+            throw new Exception('Failed to decode JSON response');
+        }
         $wsUrl = '';
         $targetId = '';
         if (isset($newTarget['webSocketDebuggerUrl'])) {
@@ -78,24 +81,24 @@ class WebpageFetcher
                 'method' => 'Page.navigate',
                 'params' => ['url' => $url],
             ]);
+            if ($navigateMessage === false) {
+                throw new Exception('Failed to encode navigation message');
+            }
             $this->logger->debug('Sending navigation command: ' . $navigateMessage);
             $client->send($navigateMessage);
 
             // Wait for navigation to complete
             $navigationComplete = false;
-            while (!$navigationComplete) {
+            do {
                 $response = $client->receive();
                 $data = json_decode($response, true);
-                $this->logger->debug('Received response: ' . $response);
-
-                if (isset($data['method']) && $data['method'] === 'Page.frameStoppedLoading') {
+                if ($data === null) {
+                    continue;
+                }
+                if (isset($data['method']) && $data['method'] === 'Page.loadEventFired') {
                     $navigationComplete = true;
                 }
-
-                // TODO: for some reason, we never receive the Page.frameStoppedLoading event. The only event we receive is this
-                // {"id":1,"result":{"frameId":"6C9BB82D57A684D8882532811FFE2BC4","loaderId":"7FC35F7645DE5DDCA9E3F420555017AD"}}
-                break;
-            }
+            } while (!$navigationComplete);
 
             // Wait a bit for JavaScript to execute (adjust as needed)
             sleep(10);
@@ -109,6 +112,9 @@ class WebpageFetcher
                     'returnByValue' => true,
                 ],
             ]);
+            if ($articleEvalMessage === false) {
+                throw new Exception('Failed to encode article evaluation message');
+            }
             $this->logger->debug('Sending article evaluation command: ' . $articleEvalMessage);
             $client->send($articleEvalMessage);
 
@@ -134,10 +140,8 @@ class WebpageFetcher
 
             try {
                 // Close the WebSocket connection
-                if (isset($client)) {
-                    $this->logger->debug('Closing WebSocket connection');
-                    $client->close();
-                }
+                $this->logger->debug('Closing WebSocket connection');
+                $client->close();
 
                 // Close the Chrome tab if we have a target ID
                 if (!empty($targetId)) {

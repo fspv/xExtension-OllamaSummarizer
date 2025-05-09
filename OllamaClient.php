@@ -153,22 +153,29 @@ EOT;
 
             $result = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $this->logger->debug("Ollama response (HTTP $httpCode): " . substr($result, 0, 500) . '...');
-
-            rewind($verbose);
-            $verboseLog = stream_get_contents($verbose);
-            $this->logger->debug('cURL verbose output: ' . $verboseLog);
-
             if ($result === false) {
                 $error = curl_error($ch);
                 curl_close($ch);
 
                 throw new Exception('Failed to connect to Ollama service: ' . $error);
             }
+            $this->logger->debug("Ollama response (HTTP $httpCode): " . substr((string) $result, 0, 500) . '...');
+
+            if ($verbose !== false) {
+                rewind($verbose);
+                $verboseLog = stream_get_contents($verbose);
+                if ($verboseLog === false) {
+                    throw new Exception('Failed to get verbose log');
+                }
+                $this->logger->debug('cURL verbose output: ' . $verboseLog);
+            }
 
             curl_close($ch);
 
-            $response = json_decode($result, true);
+            $response = json_decode((string) $result, true);
+            if ($response === null) {
+                throw new Exception('Failed to decode JSON response');
+            }
 
             if (!isset($response['response'])) {
                 $this->logger->debug('Unexpected response format: ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
