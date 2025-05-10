@@ -25,11 +25,11 @@ class EntryProcessor
         $this->ollamaClient = $ollamaClient;
     }
 
-    public function processEntry(FreshRSS_Entry $entry): FreshRSS_Entry
+    public function processEntry(FreshRSS_Entry $entry, bool $force = false): FreshRSS_Entry
     {
         $this->logger->debug('Processing entry: ' . json_encode($entry->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
-        if ($entry->hasAttribute('ai-processed')) {
+        if (!$force && $entry->hasAttribute('ai-processed')) {
             $this->logger->debug('Entry already processed, restoring tags from attributes');
 
             if ($entry->hasAttribute('ai-tags')) {
@@ -52,7 +52,7 @@ class EntryProcessor
             return $entry;
         }
 
-        if ($entry->isUpdated()) {
+        if (!$force && $entry->isUpdated()) {
             $this->logger->debug('Entry is updated, skipping');
 
             return $entry;

@@ -52,6 +52,10 @@ class FreshrssOllamaExtension extends Minz_Extension
         Minz_Log::debug(LOG_PREFIX . ': Initializing');
         $this->registerHook('entry_before_insert', [$this, 'processEntry']);
         $this->registerHook('entry_before_display', [$this, 'modifyEntryDisplay']);
+        $this->registerController('FetchAndSummarizeWithOllama');
+
+        // Register JavaScript
+        Minz_View::appendScript($this->getFileUrl('summarize.js', 'js'));
     }
 
     private function getConfiguration(): Configuration
@@ -187,7 +191,7 @@ class FreshrssOllamaExtension extends Minz_Extension
         }
     }
 
-    public function processEntry(FreshRSS_Entry $entry): FreshRSS_Entry
+    public function processEntry(FreshRSS_Entry $entry, bool $force = false): FreshRSS_Entry
     {
         # Construct a unique identifier for the entry to identify processing of the same entry in the logs
         $entryId = $entry->guid();
@@ -200,16 +204,26 @@ class FreshrssOllamaExtension extends Minz_Extension
             $this->processor = $this->getProcessor($logger);
         }
 
-        return $this->processor->processEntry($entry);
+        return $this->processor->processEntry($entry, $force);
     }
 
     public function modifyEntryDisplay(FreshRSS_Entry $entry): FreshRSS_Entry
     {
-        if (!$entry->hasAttribute('ai-processed')) {
-            return $entry;
-        }
-
         $content = $entry->content();
+
+        // Add the summarize button if the entry hasn't been processed yet
+        $text = 'Summarize with AI';
+        if ($entry->hasAttribute('ai-processed')) {
+            $text = 'Regenerate AI summary';
+        }
+        $buttonHtml = sprintf(
+            '<button class="btn btn-primary summarize-btn" data-entry-id="%s">%s</button>',
+            htmlspecialchars($entry->id()),
+            $text
+        );
+        $content = $buttonHtml . '<br/><br/>' . $content;
+
+        // Add summary and debug info if they exist
         $summary = $entry->attributeString('ai-summary');
         $debugInfo = $entry->attributeString('ai-debug');
 

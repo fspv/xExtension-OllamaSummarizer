@@ -1,0 +1,99 @@
+services:
+  freshrss:
+    build:
+      context: .
+      dockerfile_inline:
+        FROM freshrss/freshrss:edge
+        RUN apt-get update -y
+        RUN apt-get upgrade -y
+        RUN apt-get install -y composer
+        RUN composer require textalk/websocket
+    container_name: freshrss
+    restart: unless-stopped
+    volumes:
+      - ./freshrss/data:/var/www/FreshRSS/data
+      - ./freshrss/extensions:/var/www/FreshRSS/extensions
+    environment:
+      CRON_MIN: '2,32'
+      FRESHRSS_ENV: development
+      LISTEN: 127.0.0.1:80
+    ports:
+      - 1234:80
+    depends_on:
+      - freshrss-chrome
+      - freshrss-ollama
+    networks:
+      - freshrss
+  freshrss-ollama:
+    image: ollama/ollama:latest
+    container_name: freshrss-ollama
+    volumes:
+      - ./ollama:/root/.ollama
+    networks:
+      - freshrss
+  freshrss-chrome:
+    restart: unless-stopped
+    container_name: freshrss-chrome
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM debian:bullseye-slim
+
+        # Install dependencies
+        RUN apt-get update \
+          && apt-get install -y wget gnupg curl unzip dbus dbus-x11 xvfb upower x11vnc novnc python3-websockify fluxbox \
+          && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+          && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+          && apt-get update \
+          && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+            --no-install-recommends \
+          && rm -rf /var/lib/apt/lists/*
+
+        # Create a non-root user
+        RUN groupadd -r chromiumuser && useradd -u 1000 -rm -g chromiumuser -G audio,video chromiumuser
+
+        RUN mkdir /run/dbus
+        RUN chmod 777 /run/dbus
+        RUN echo 01234567890123456789012345678901 > /etc/machine-id
+
+        USER chromiumuser
+
+        RUN mkdir -p /tmp/chrome/extensions
+        RUN mkdir -p /tmp/chrome/profile
+
+        # Download and unzip "I Still Don't Care About Cookies"
+        RUN curl -L -o /tmp/isdcac.zip https://github.com/OhMyGuus/I-Still-Dont-Care-About-Cookies/releases/download/v1.1.4/ISDCAC-chrome-source.zip && \
+            unzip /tmp/isdcac.zip -d /tmp/chrome/extensions/isdcac && \
+            rm /tmp/isdcac.zip
+
+        # Download and unzip uBlock Origin
+        RUN curl -L -o /tmp/ublock.zip https://github.com/uBlockOrigin/uBOL-home/releases/download/uBOLite_2025.4.13.1188/uBOLite_2025.4.13.1188.chromium.mv3.zip && \
+            unzip /tmp/ublock.zip -d /tmp/chrome/extensions/ublock && \
+            rm /tmp/ublock.zip
+
+        ENV DBUS_SESSION_BUS_ADDRESS autolaunch:
+
+        RUN x11vnc -storepasswd 123 /tmp/vnc-password
+
+        RUN echo '#!/bin/bash -uex\n\
+        Xvfb :1 -screen 0 1024x768x16 -ac -nolisten tcp -nolisten unix & \
+        DISPLAY=:1 fluxbox & \
+        DISPLAY=:1 x11vnc -nopw -forever -localhost -shared -rfbport 5900 -rfbportv6 5900 & \
+        DISPLAY=:1 websockify -D --web=/usr/share/novnc 7900 localhost:5900 & \
+        dbus-daemon --system --fork --print-address 1 > /tmp/dbus-session-addr.txt && \
+        export DBUS_SESSION_BUS_ADDRESS=$(cat /tmp/dbus-session-addr.txt) && \
+        DISPLAY=:1 google-chrome --disable-gpu --no-default-browser-check --no-first-run --disable-3d-apis --disable-dev-shm-usage \
+        --load-extension=/tmp/chrome/extensions/isdcac,/tmp/chrome/extensions/ublock \
+        --remote-debugging-address=0.0.0.0 --remote-debugging-port=9222 --user-data-dir=$(mktemp -d) \
+        "$@"' > /tmp/run-chrome.sh && chmod +x /tmp/run-chrome.sh
+
+        # Set the entrypoint
+        ENTRYPOINT ["/tmp/run-chrome.sh"]
+    cap_add:
+      - SYS_ADMIN
+    networks:
+      - freshrss
+
+networks:
+  freshrss:
+
