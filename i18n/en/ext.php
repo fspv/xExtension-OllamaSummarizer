@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'freshrss_ollama' => [
+    'ollama_summarizer' => [
         'chrome_host' => 'Chrome Host',
         'chrome_host_help' => 'Hostname where Chrome is running with remote debugging enabled',
         'chrome_port' => 'Chrome Port',
