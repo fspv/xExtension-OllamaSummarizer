@@ -50,3 +50,12 @@ sudo docker build -t test .
 ```
 
 Additionally, run the application with a provided minimal docker compose file with `docker compose up` and try to check if the extension is actually working.
+
+Make sure to test:
+
+1. Create a new user
+2. Enable the extension
+3. Set model to `gemma3:1b-it-qat`
+3. Check that chrome and ollama show up as connected
+4. Try to press the summarize button on any entry
+5. Try to enable the default feed and reload articles

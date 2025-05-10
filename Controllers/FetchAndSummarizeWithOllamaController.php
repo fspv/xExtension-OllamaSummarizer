@@ -31,7 +31,7 @@ class FreshExtension_FetchAndSummarizeWithOllama_Controller extends Minz_ActionC
             }
 
             // Get the extension instance
-            // import it from ../extension.php
+            /** @psalm-suppress MissingFile */
             require_once dirname(__FILE__) . '/../extension.php';
             $extension = new FreshrssOllamaExtension(['name' => 'FreshrssOllamaExtension', 'entrypoint' => 'FreshrssOllamaExtension', 'path' => dirname(__FILE__) . '/../']);
 
@@ -49,7 +49,7 @@ class FreshExtension_FetchAndSummarizeWithOllama_Controller extends Minz_ActionC
             ]);
             exit;
         } catch (Exception $e) {
-            Minz_Log::error(LOG_PREFIX . ': Error processing entry: ' . $e->getMessage());
+            Minz_Log::error('FetchAndSummarizeWithOllamaController: Error processing entry: ' . $e->getMessage());
             header('Content-Type: application/json');
             echo json_encode([
                 'success' => false,

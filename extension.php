@@ -54,8 +54,8 @@ class FreshrssOllamaExtension extends Minz_Extension
         $this->registerHook('entry_before_display', [$this, 'modifyEntryDisplay']);
         $this->registerController('FetchAndSummarizeWithOllama');
 
-        // Register JavaScript - use defer only, not async
-        $scriptUrl = $this->getFileUrl('summarize.js', '');
+        /** @phpstan-ignore-next-line */
+        $scriptUrl = $this->getFileUrl('summarize.js', 'js');
         Minz_View::appendScript($scriptUrl, async: false);
     }
 
@@ -162,7 +162,6 @@ class FreshrssOllamaExtension extends Minz_Extension
 
     public function handleTestFetchAction(): void
     {
-        $defaultConfig = require dirname(__FILE__) . '/config-user.default.php';
         if (!Minz_Request::isPost()) {
             Minz_Request::bad(Minz_Translate::t('feedback.access.denied'));
 
@@ -178,14 +177,11 @@ class FreshrssOllamaExtension extends Minz_Extension
 
         try {
             $logger = new Logger(LOG_PREFIX);
-            $userConf = FreshRSS_Context::$user_conf;
-            if ($userConf === null) {
-                throw new Exception('User configuration is null');
-            }
+            $config = $this->getConfiguration();
             $fetcher = new WebpageFetcher(
                 $logger,
-                $userConf->attributeString('freshrss_ollama_chrome_host') ?? $defaultConfig['freshrss_ollama_chrome_host'],
-                $userConf->attributeInt('freshrss_ollama_chrome_port') ?? $defaultConfig['freshrss_ollama_chrome_port']
+                $config->getChromeHost(),
+                $config->getChromePort()
             );
 
             $content = $fetcher->fetchContent($url, 'article');

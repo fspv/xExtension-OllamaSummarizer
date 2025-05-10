@@ -17,7 +17,6 @@ if (!isset($this) || !($this instanceof FreshrssOllamaExtension)) {
 }
 ?>
 
-
 <form action="<?php echo _url('extension', 'configure', 'e', urlencode($this->getName())); ?>" method="post">
     <input type="hidden" name="_csrf" value="<?php echo FreshRSS_Auth::csrfToken(); ?>" />
     <div class="form-group">
@@ -33,6 +32,33 @@ if (!isset($this) || !($this instanceof FreshrssOllamaExtension)) {
         <div class="group-controls">
             <input type="number" name="chrome_port" id="chrome_port" value="<?php echo $config->getChromePort(); ?>" />
             <p class="help"><?php echo _t('ext.freshrss_ollama.chrome_port_help'); ?></p>
+            <?php
+            // Check Chrome connection
+            $chromeStatus = false;
+            $chromeError = '';
+            try {
+                $ch = curl_init("http://{$config->getChromeHost()}:{$config->getChromePort()}/json/version");
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                
+                if ($httpCode === 200 && $response !== false) {
+                    $chromeStatus = true;
+                } else {
+                    $chromeError = "HTTP Code: $httpCode";
+                }
+            } catch (Exception $e) {
+                $chromeError = $e->getMessage();
+            }
+            ?>
+            <div style="margin-top: 8px; padding: 8px; border-radius: 4px; font-weight: bold; <?php echo $chromeStatus ? 'background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;' : 'background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;'; ?>">
+                Chrome Status: <strong><?php echo $chromeStatus ? 'Connected' : 'Not Connected'; ?></strong>
+                <?php if (!$chromeStatus && $chromeError): ?>
+                    <br><small style="font-weight: normal; display: block; margin-top: 4px;">Error: <?php echo htmlspecialchars($chromeError); ?></small>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 
@@ -41,6 +67,39 @@ if (!isset($this) || !($this instanceof FreshrssOllamaExtension)) {
         <div class="group-controls">
             <input type="text" name="ollama_host" id="ollama_host" value="<?php echo $config->getOllamaHost(); ?>" />
             <p class="help"><?php echo _t('ext.freshrss_ollama.ollama_host_help'); ?></p>
+            <?php
+            // Check Ollama connection
+            $ollamaStatus = false;
+            $ollamaError = '';
+            $modelStatus = false;
+            try {
+                $ch = curl_init("{$config->getOllamaHost()}/api/tags");
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                
+                if ($httpCode === 200 && $response !== false) {
+                    $ollamaStatus = true;
+                    // Check if model exists
+                    $models = json_decode($response, true);
+                    if ($models && isset($models['models'])) {
+                        $modelStatus = in_array($config->getOllamaModel(), array_column($models['models'], 'name'));
+                    }
+                } else {
+                    $ollamaError = "HTTP Code: $httpCode";
+                }
+            } catch (Exception $e) {
+                $ollamaError = $e->getMessage();
+            }
+            ?>
+            <div style="margin-top: 8px; padding: 8px; border-radius: 4px; font-weight: bold; <?php echo $ollamaStatus ? 'background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;' : 'background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;'; ?>">
+                Ollama Status: <strong><?php echo $ollamaStatus ? 'Connected' : 'Not Connected'; ?></strong>
+                <?php if (!$ollamaStatus && $ollamaError): ?>
+                    <br><small style="font-weight: normal; display: block; margin-top: 4px;">Error: <?php echo htmlspecialchars($ollamaError); ?></small>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 
@@ -49,6 +108,14 @@ if (!isset($this) || !($this instanceof FreshrssOllamaExtension)) {
         <div class="group-controls">
             <input type="text" name="ollama_model" id="ollama_model" value="<?php echo $config->getOllamaModel(); ?>" />
             <p class="help"><?php echo _t('ext.freshrss_ollama.ollama_model_help'); ?></p>
+            <?php if ($ollamaStatus): ?>
+            <div style="margin-top: 8px; padding: 8px; border-radius: 4px; font-weight: bold; <?php echo $modelStatus ? 'background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;' : 'background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;'; ?>">
+                Model Status: <strong><?php echo $modelStatus ? 'Found' : 'Not Found'; ?></strong>
+                <?php if (!$modelStatus): ?>
+                    <br><small style="font-weight: normal; display: block; margin-top: 4px;">Model "<?php echo htmlspecialchars($config->getOllamaModel()); ?>" is not available. Please check the model name or pull it using <code>ollama pull <?php echo htmlspecialchars($config->getOllamaModel()); ?></code></small>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 

@@ -2,38 +2,37 @@ services:
   freshrss:
     build:
       context: .
-      dockerfile_inline:
+      dockerfile_inline: |
         FROM freshrss/freshrss:edge
         RUN apt-get update -y
         RUN apt-get upgrade -y
         RUN apt-get install -y composer
         RUN composer require textalk/websocket
-    container_name: freshrss
+        ADD . /var/www/FreshRSS/extensions/xExtension-OllamaSummarizer
+        RUN rm -rf /var/www/FreshRSS/extensions/xExtension-OllamaSummarizer/vendor
+        RUN chown -R www-data:www-data /var/www/FreshRSS/extensions/xExtension-OllamaSummarizer
     restart: unless-stopped
-    volumes:
-      - ./freshrss/data:/var/www/FreshRSS/data
-      - ./freshrss/extensions:/var/www/FreshRSS/extensions
     environment:
       CRON_MIN: '2,32'
       FRESHRSS_ENV: development
-      LISTEN: 127.0.0.1:80
-    ports:
-      - 1234:80
+      LISTEN: 0.0.0.0:80
     depends_on:
       - freshrss-chrome
       - freshrss-ollama
-    networks:
-      - freshrss
+    network_mode: service:freshrss-chrome
   freshrss-ollama:
-    image: ollama/ollama:latest
-    container_name: freshrss-ollama
-    volumes:
-      - ./ollama:/root/.ollama
-    networks:
-      - freshrss
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ollama/ollama:latest
+        RUN ollama serve & sleep 10 && ollama pull gemma3:1b-it-qat
+    depends_on:
+      - freshrss-chrome
+    network_mode: service:freshrss-chrome
   freshrss-chrome:
     restart: unless-stopped
-    container_name: freshrss-chrome
+    ports:
+      - 1234:80
     build:
       context: .
       dockerfile_inline: |
@@ -75,6 +74,8 @@ services:
 
         RUN x11vnc -storepasswd 123 /tmp/vnc-password
 
+        RUN rm -rf /run/dbus/pid
+
         RUN echo '#!/bin/bash -uex\n\
         Xvfb :1 -screen 0 1024x768x16 -ac -nolisten tcp -nolisten unix & \
         DISPLAY=:1 fluxbox & \
@@ -91,9 +92,3 @@ services:
         ENTRYPOINT ["/tmp/run-chrome.sh"]
     cap_add:
       - SYS_ADMIN
-    networks:
-      - freshrss
-
-networks:
-  freshrss:
-
