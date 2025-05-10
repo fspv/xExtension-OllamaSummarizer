@@ -1,6 +1,7 @@
 <?php
 // Configuration view for the FreshRSS Ollama extension
 // Save as: ./extensions/FreshrssOllamaExtension/configure.phtml
+declare(strict_types=1);
 
 require_once __DIR__ . '/Configuration.php';
 $defaults = Configuration::createDefault();
@@ -9,9 +10,14 @@ if (FreshRSS_Context::$user_conf) {
 } else {
     $config = $defaults;
 }
-?>
 
 /** @var FreshrssOllamaExtension $this */
+if (!isset($this) || !($this instanceof FreshrssOllamaExtension)) {
+    throw new Exception('Extension instance not available');
+}
+?>
+
+
 <form action="<?php echo _url('extension', 'configure', 'e', urlencode($this->getName())); ?>" method="post">
     <input type="hidden" name="_csrf" value="<?php echo FreshRSS_Auth::csrfToken(); ?>" />
     <div class="form-group">
@@ -67,6 +73,46 @@ if (FreshRSS_Context::$user_conf) {
         <div class="group-controls">
             <input type="number" name="context_length" id="context_length" min="1024" max="32768" value="<?php echo $config->getContextLength(); ?>" />
             <p class="help"><?php echo _t('ext.freshrss_ollama.context_length_help'); ?></p>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-name"><?php echo _t('ext.freshrss_ollama.selected_feeds'); ?></label>
+        <div class="group-controls">
+            <p class="help"><?php echo _t('ext.freshrss_ollama.selected_feeds_help'); ?></p>
+            <?php
+            $feedDAO = FreshRSS_Factory::createFeedDao();
+            $feeds = $feedDAO->listFeeds();
+            $selectedFeeds = $config->getSelectedFeeds();
+            ?>
+            <fieldset style="height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;">
+                <?php foreach ($feeds as $feed): ?>
+                    <?php 
+                    $tooltip = '';
+                    if ($feed->website() !== '') {
+                        $tooltip .= 'Website: ' . htmlspecialchars($feed->website()) . "\n";
+                    }
+                    if ($feed->url() !== '') {
+                        $tooltip .= 'URL: ' . htmlspecialchars($feed->url(false)) . "\n";
+                    }
+                    if ($feed->description() !== '') {
+                        $tooltip .= 'Description: ' . htmlspecialchars($feed->description());
+                    }
+                    $tooltip = trim($tooltip);
+                    ?>
+                    <div class="feed-checkbox">
+                        <label for="feed_<?php echo $feed->id(); ?>" <?php echo $tooltip ? 'title="' . $tooltip . '"' : ''; ?>>
+                        <input type="checkbox" 
+                               name="selected_feeds[]" 
+                               id="feed_<?php echo $feed->id(); ?>" 
+                               value="<?php echo $feed->id(); ?>"
+                               <?php echo in_array($feed->id(), $selectedFeeds, true) ? 'checked' : ''; ?> />
+                            <img src="<?php echo $feed->favicon(); ?>" alt="" height="16" width="16" />
+                            <?php echo htmlspecialchars($feed->name()); ?>
+                        </label>
+                    </div>
+                <?php endforeach; ?>
+            </fieldset>
         </div>
     </div>
 

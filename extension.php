@@ -54,8 +54,9 @@ class FreshrssOllamaExtension extends Minz_Extension
         $this->registerHook('entry_before_display', [$this, 'modifyEntryDisplay']);
         $this->registerController('FetchAndSummarizeWithOllama');
 
-        // Register JavaScript
-        Minz_View::appendScript($this->getFileUrl('summarize.js', 'js'));
+        // Register JavaScript - use defer only, not async
+        $scriptUrl = $this->getFileUrl('summarize.js', '');
+        Minz_View::appendScript($scriptUrl, async: false);
     }
 
     private function getConfiguration(): Configuration
@@ -100,15 +101,27 @@ class FreshrssOllamaExtension extends Minz_Extension
             Minz_Log::debug(LOG_PREFIX . ': Processing configuration form submission');
 
             try {
+                // Convert selected feeds to integers
+                $selectedFeeds = array_map('intval', Minz_Request::paramArray('selected_feeds', false));
+                $modelOptions = Minz_Request::paramArray('model_options', false);
+                $modelOptionsValidated = [];
+                foreach ($modelOptions as $key => $value) {
+                    if (!is_string($key) || $key === '') {
+                        throw new InvalidArgumentException('Model options must have string keys');
+                    }
+                    $modelOptionsValidated[$key] = $value;
+                }
+
                 $config = new Configuration(
                     chromeHost: Minz_Request::paramString('chrome_host'),
                     chromePort: Minz_Request::paramInt('chrome_port'),
                     ollamaHost: rtrim(Minz_Request::paramString('ollama_host'), '/'),
                     ollamaModel: Minz_Request::paramString('ollama_model'),
-                    modelOptions: Minz_Request::paramArray('model_options'),
+                    modelOptions: $modelOptionsValidated,
                     promptLengthLimit: Minz_Request::paramInt('prompt_length_limit'),
                     contextLength: Minz_Request::paramInt('context_length'),
                     promptTemplate: Minz_Request::paramString('prompt_template'),
+                    selectedFeeds: $selectedFeeds,
                 );
 
                 $userConf = FreshRSS_Context::$user_conf;
@@ -117,6 +130,9 @@ class FreshrssOllamaExtension extends Minz_Extension
                 }
 
                 foreach ($config->toArray() as $key => $value) {
+                    if (!is_string($key) || $key === '') {
+                        continue;
+                    }
                     $userConf->_attribute($key, $value);
                 }
 
@@ -199,6 +215,14 @@ class FreshrssOllamaExtension extends Minz_Extension
         $timestamp = round(microtime(true));
         $prefix = LOG_PREFIX . " [id:{$entryIdHash}] [start_timestamp:{$timestamp}]";
         $logger = new Logger($prefix);
+
+        // Check if the feed is selected for processing
+        $config = $this->getConfiguration();
+        if (!$force && !$config->isFeedSelected($entry->feedId())) {
+            $logger->debug('Feed not selected for processing, skipping');
+
+            return $entry;
+        }
 
         if ($this->processor === null) {
             $this->processor = $this->getProcessor($logger);

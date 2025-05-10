@@ -16,5 +16,7 @@ return [
         'prompt_length_limit_help' => 'Maximum length of the prompt in characters',
         'context_length' => 'Context Length',
         'context_length_help' => 'Context length for the model in tokens',
+        'selected_feeds' => 'Selected Feeds',
+        'selected_feeds_help' => 'Feeds that should be processed',
     ],
 ];
