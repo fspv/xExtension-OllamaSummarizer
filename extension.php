@@ -53,30 +53,26 @@ class FreshrssOllamaExtension extends Minz_Extension
         $this->registerHook('entry_before_display', [$this, 'modifyEntryDisplay']);
     }
 
-    private function getProcessor(): EntryProcessor
+    private function getProcessor(Logger $logger): EntryProcessor
     {
-        if ($this->processor === null) {
-            $logger = new Logger(LOG_PREFIX);
-            $userConf = FreshRSS_Context::$user_conf;
-            if ($userConf === null) {
-                throw new Exception('User configuration is null');
-            }
-            $webpageFetcher = new WebpageFetcher(
-                $logger,
-                $userConf->attributeString('freshrss_ollama_chrome_host') ?? 'localhost',
-                $userConf->attributeInt('freshrss_ollama_chrome_port') ?? 9222
-            );
-            $ollamaClient = new OllamaClientImpl(
-                $logger,
-                $userConf->attributeString('freshrss_ollama_ollama_host') ?? 'http://localhost:11434',
-                $userConf->attributeString('freshrss_ollama_ollama_model') ?? 'llama3',
-                $userConf->attributeArray('freshrss_ollama_model_options') ?? [],
-                $userConf->attributeInt('freshrss_ollama_context_length') ?? 8192
-            );
-            $this->processor = new EntryProcessor($logger, $webpageFetcher, $ollamaClient);
+        $userConf = FreshRSS_Context::$user_conf;
+        if ($userConf === null) {
+            throw new Exception('User configuration is null');
         }
+        $webpageFetcher = new WebpageFetcher(
+            $logger,
+            $userConf->attributeString('freshrss_ollama_chrome_host') ?? 'localhost',
+            $userConf->attributeInt('freshrss_ollama_chrome_port') ?? 9222
+        );
+        $ollamaClient = new OllamaClientImpl(
+            $logger,
+            $userConf->attributeString('freshrss_ollama_ollama_host') ?? 'http://localhost:11434',
+            $userConf->attributeString('freshrss_ollama_ollama_model') ?? 'llama3',
+            $userConf->attributeArray('freshrss_ollama_model_options') ?? [],
+            $userConf->attributeInt('freshrss_ollama_context_length') ?? 8192
+        );
 
-        return $this->processor;
+        return new EntryProcessor($logger, $webpageFetcher, $ollamaClient);
     }
 
     public function handleConfigureAction(): void
@@ -183,7 +179,14 @@ class FreshrssOllamaExtension extends Minz_Extension
 
     public function processEntry(FreshRSS_Entry $entry): FreshRSS_Entry
     {
-        return $this->getProcessor()->processEntry($entry);
+        # Construct a unique identifier for the entry to identify processing of the same entry in the logs
+        $entryId = $entry->guid();
+        $entryIdHash = substr(hash('sha256', $entryId), 0, 8);
+        $timestamp = round(microtime(true));
+        $prefix = LOG_PREFIX . " [id:{$entryIdHash}] [start_timestamp:{$timestamp}]";
+        $logger = new Logger($prefix);
+
+        return $this->getProcessor($logger)->processEntry($entry);
     }
 
     public function modifyEntryDisplay(FreshRSS_Entry $entry): FreshRSS_Entry

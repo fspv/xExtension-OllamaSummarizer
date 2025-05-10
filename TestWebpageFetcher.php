@@ -8,6 +8,10 @@ class TestWebpageFetcher extends WebpageFetcher
 {
     private ?string $response = null;
 
+    private int $attempts = 0;
+
+    private int $failuresBeforeSuccess = 0;
+
     public function __construct(Logger $logger)
     {
         parent::__construct($logger, 'localhost', 9222);
@@ -18,12 +22,37 @@ class TestWebpageFetcher extends WebpageFetcher
         $this->response = $response;
     }
 
-    public function fetchContent(string $url, string $path = 'article'): string
+    public function setFailuresBeforeSuccess(int $count): void
     {
+        $this->failuresBeforeSuccess = $count;
+        $this->attempts = 0;
+    }
+
+    protected function createChromeTab(): array
+    {
+        $this->attempts++;
+        if ($this->attempts <= $this->failuresBeforeSuccess) {
+            throw new \WebSocket\TimeoutException('Client read timeout');
+        }
+
+        return ['wsUrl' => 'ws://test', 'targetId' => 'test-id'];
+    }
+
+    protected function attemptFetch(string $url, string $path): string
+    {
+        $this->attempts++;
+        if ($this->attempts <= $this->failuresBeforeSuccess) {
+            throw new \WebSocket\TimeoutException('Client read timeout');
+        }
         if ($this->response === null) {
             throw new RuntimeException('Test response not set. Call setResponse() first.');
         }
 
         return $this->response;
+    }
+
+    public function getAttempts(): int
+    {
+        return $this->attempts;
     }
 }

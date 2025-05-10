@@ -27,12 +27,6 @@ class EntryProcessor
 
     public function processEntry(FreshRSS_Entry $entry): FreshRSS_Entry
     {
-        # Construct a unique identifier for the entry to identify processing of the same entry in the logs
-        $entryId = $entry->guid();
-        $entryIdHash = substr(hash('sha256', $entryId), 0, 8);
-        $timestamp = round(microtime(true));
-        $prefix = LOG_PREFIX . " [id:{$entryIdHash}] [start_timestamp:{$timestamp}]";
-        $this->logger = new Logger($prefix);
         $this->logger->debug('Processing entry: ' . json_encode($entry->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         if ($entry->hasAttribute('ai-processed')) {

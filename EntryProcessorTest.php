@@ -140,6 +140,147 @@ class EntryProcessorTest extends TestCase
         $this->assertEquals(['test', 'article'], $processedEntry->attributeArray('ai-tags'));
     }
 
+    public function testProcessEntryWithEmptyOllamaResponse(): void
+    {
+        // Create a test entry
+        $entry = $this->createTestEntry('https://example.com/article', 'Test Article');
+
+        // Set up test responses
+        $this->webpageFetcher->setResponse('This is the full article content');
+        $this->ollamaClient->setResponse([
+            'summary' => '',
+            'tags' => [],
+        ]);
+
+        // Process the entry
+        $processedEntry = $this->processor->processEntry($entry);
+
+        // Verify the results
+        $this->assertTrue($processedEntry->hasAttribute('ai-processed'));
+        $this->assertFalse($processedEntry->hasAttribute('ai-summary'));
+        $this->assertEquals([], $processedEntry->attributeArray('ai-tags'));
+    }
+
+    public function testProcessEntryWithNullFeed(): void
+    {
+        // Create a test entry with null feed
+        $entry = $this->createTestEntry('https://example.com/article', 'Test Article');
+        $entry->_feed(null);
+
+        // Expect an exception
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('Feed is null for entry');
+
+        // Process the entry
+        $this->processor->processEntry($entry);
+    }
+
+    public function testProcessEntryWithWebpageFetcherError(): void
+    {
+        // Create a test entry
+        $entry = $this->createTestEntry('https://example.com/article', 'Test Article');
+
+        // Set up test responses
+        $this->webpageFetcher->setResponse('');
+        $this->ollamaClient->setResponse([
+            'summary' => 'This is a summary of the article',
+            'tags' => ['test', 'article'],
+        ]);
+
+        // Process the entry
+        $processedEntry = $this->processor->processEntry($entry);
+
+        // Verify the results
+        $this->assertTrue($processedEntry->hasAttribute('ai-processed'));
+        $this->assertFalse($processedEntry->hasAttribute('ai-summary'));
+        $this->assertEquals([], $processedEntry->attributeArray('ai-tags'));
+    }
+
+    public function testProcessEntryWithDebugInformation(): void
+    {
+        // Create a test entry
+        $entry = $this->createTestEntry('https://example.com/article', 'Test Article');
+
+        // Set up test responses
+        $this->webpageFetcher->setResponse('This is the full article content');
+        $this->ollamaClient->setResponse([
+            'summary' => 'This is a summary of the article',
+            'tags' => ['test', 'article'],
+        ]);
+
+        // Process the entry
+        $processedEntry = $this->processor->processEntry($entry);
+
+        // Verify debug information
+        $this->assertTrue($processedEntry->hasAttribute('ai-debug'));
+        $debugInfo = json_decode($processedEntry->attributeString('ai-debug'), true);
+        $this->assertIsArray($debugInfo);
+        $this->assertArrayHasKey('content', $debugInfo);
+        $this->assertArrayHasKey('ollamaResponse', $debugInfo);
+    }
+
+    public function testTagNormalization(): void
+    {
+        // Create a test entry
+        $entry = $this->createTestEntry('https://example.com/article', 'Test Article');
+
+        // Set up test responses
+        $this->webpageFetcher->setResponse('This is the full article content');
+        $this->ollamaClient->setResponse([
+            'summary' => 'This is a summary of the article',
+            'tags' => ['Test Tag', 'ANOTHER TAG', 'tag with spaces', 'tag-with-special-chars!@#'],
+        ]);
+
+        // Process the entry
+        $processedEntry = $this->processor->processEntry($entry);
+
+        // Verify tag normalization
+        $this->assertTrue($processedEntry->hasAttribute('ai-processed'));
+        $this->assertEquals(['test tag', 'another tag', 'tag with spaces', 'tagwithspecialchars'], $processedEntry->attributeArray('ai-tags'));
+    }
+
+    public function testProcessEntryWithWebSocketTimeout(): void
+    {
+        // Create a test entry
+        $entry = $this->createTestEntry('https://example.com/article', 'Test Article');
+
+        // Configure the webpage fetcher to fail twice before succeeding
+        $this->webpageFetcher->setFailuresBeforeSuccess(2);
+        $this->webpageFetcher->setResponse('This is the full article content after retries');
+        $this->ollamaClient->setResponse([
+            'summary' => 'This is a summary of the article',
+            'tags' => ['test', 'article'],
+        ]);
+
+        // Process the entry
+        $processedEntry = $this->processor->processEntry($entry);
+
+        // Verify the entry was processed successfully after retries
+        $this->assertTrue($processedEntry->hasAttribute('ai-processed'));
+        $this->assertEquals('This is a summary of the article', $processedEntry->attributeString('ai-summary'));
+        $this->assertEquals(['test', 'article'], $processedEntry->attributeArray('ai-tags'));
+
+        // Verify that we made exactly 3 attempts (2 failures + 1 success)
+        $this->assertEquals(3, $this->webpageFetcher->getAttempts());
+    }
+
+    public function testProcessEntryWithMaxRetriesExceeded(): void
+    {
+        // Create a test entry
+        $entry = $this->createTestEntry('https://example.com/article', 'Test Article');
+
+        // Configure the webpage fetcher to fail more times than MAX_RETRIES
+        $this->webpageFetcher->setFailuresBeforeSuccess(4); // More than MAX_RETRIES (3)
+        $this->webpageFetcher->setResponse('This content should not be used');
+
+        // Expect an exception after all retries are exhausted
+        $this->expectException(\WebSocket\TimeoutException::class);
+        $this->expectExceptionMessage('Client read timeout');
+
+        // Process the entry
+        $this->processor->processEntry($entry);
+    }
+
     private function createTestEntry(string $url, string $title): TestFreshRSSEntry
     {
         $entry = new TestFreshRSSEntry();

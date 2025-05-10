@@ -20,6 +20,10 @@ class WebpageFetcher
 
     private int $devtoolsPort;
 
+    private const MAX_RETRIES = 3;
+
+    private const RETRY_DELAY_SECONDS = 2;
+
     public function __construct(Logger $logger, string $devtoolsHost = 'localhost', int $devtoolsPort = 9222)
     {
         $this->logger = $logger;
@@ -28,6 +32,33 @@ class WebpageFetcher
     }
 
     public function fetchContent(string $url, string $path): string
+    {
+        $attempt = 1;
+        $lastException = null;
+
+        while ($attempt <= self::MAX_RETRIES) {
+            try {
+                $this->logger->debug("Fetch attempt {$attempt} of " . self::MAX_RETRIES . " for URL: {$url}");
+
+                return $this->attemptFetch($url, $path);
+            } catch (Exception $e) {
+                $lastException = $e;
+                $this->logger->warning("Fetch attempt {$attempt} failed: " . $e->getMessage());
+
+                if ($attempt < self::MAX_RETRIES) {
+                    $this->logger->debug('Waiting ' . self::RETRY_DELAY_SECONDS . ' seconds before next attempt');
+                    sleep(self::RETRY_DELAY_SECONDS);
+                }
+                $attempt++;
+            }
+        }
+
+        $this->logger->error("All fetch attempts failed for URL: {$url}");
+
+        throw $lastException;
+    }
+
+    protected function attemptFetch(string $url, string $path): string
     {
         $this->logger->debug('Fetching ' . $url . ' with path selector ' . $path);
         $this->logger->debug('Connecting to Chrome DevTools via WebSocket');
@@ -168,5 +199,62 @@ class WebpageFetcher
                 $this->logger->error('Error during cleanup: ' . $e->getMessage());
             }
         }
+    }
+
+    /**
+     * Creates a new Chrome tab and returns its WebSocket URL and target ID.
+     *
+     * @throws Exception If tab creation fails or response is invalid
+     *
+     * @return array{wsUrl: string, targetId: string}
+     */
+    protected function createChromeTab(): array
+    {
+        $ch = curl_init("http://{$this->devtoolsHost}:{$this->devtoolsPort}/json/new");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+        $createResponse = curl_exec($ch);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if (!$createResponse) {
+            throw new Exception('Could not create new tab in Chrome: ' . $curlError);
+        }
+
+        $newTarget = json_decode((string) $createResponse, true);
+        if ($newTarget === null) {
+            throw new Exception('Failed to decode JSON response');
+        }
+
+        if (!isset($newTarget['webSocketDebuggerUrl'])) {
+            throw new Exception('No WebSocket URL in new target response');
+        }
+
+        return [
+            'wsUrl' => $newTarget['webSocketDebuggerUrl'],
+            'targetId' => $newTarget['id'] ?? '',
+        ];
+    }
+
+    protected function closeChromeTab(string $targetId): void
+    {
+        if (empty($targetId)) {
+            return;
+        }
+
+        $ch = curl_init("http://{$this->devtoolsHost}:{$this->devtoolsPort}/json/close/{$targetId}");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+
+        $result = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if ($result === false) {
+            $this->logger->error('Error closing Chrome tab: ' . curl_error($ch));
+        } else {
+            $this->logger->debug('Chrome tab closed successfully (HTTP ' . $httpCode . ')');
+        }
+
+        curl_close($ch);
     }
 }

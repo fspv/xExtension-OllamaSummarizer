@@ -1,0 +1,6 @@
+{
+    "$schema": "/home/spv/.cursor-server/extensions/phpactor.vscode-phpactor-1.7.2/vendor/phpactor/phpactor/phpactor.schema.json",
+    "language_server_phpstan.enabled": false,
+    "language_server_psalm.enabled": false,
+    "language_server_php_cs_fixer.enabled": true
+}

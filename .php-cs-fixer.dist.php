@@ -5,6 +5,7 @@ $finder = PhpCsFixer\Finder::create()
     ->exclude('vendor');
 
 return (new PhpCsFixer\Config())
+    ->setRiskyAllowed(true)
     ->setRules([
         '@PSR12' => true,
         'strict_param' => true,
