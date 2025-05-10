@@ -34,6 +34,7 @@ class WebpageFetcher
     public function fetchContent(string $url, string $path): string
     {
         $attempt = 1;
+        /** @var Exception */
         $lastException = null;
 
         while ($attempt <= self::MAX_RETRIES) {
@@ -63,33 +64,11 @@ class WebpageFetcher
         $this->logger->debug('Fetching ' . $url . ' with path selector ' . $path);
         $this->logger->debug('Connecting to Chrome DevTools via WebSocket');
 
-        // Create a new target/page if none found
-        $this->logger->debug('No available targets found, creating a new one');
-
-        $ch = curl_init("http://{$this->devtoolsHost}:{$this->devtoolsPort}/json/new");
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT'); // Using PUT method instead of GET
-        $createResponse = curl_exec($ch);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        $this->logger->debug('Create new target response: ' . $createResponse);
-        if (!$createResponse) {
-            throw new Exception('Could not create new tab in Chrome: ' . $curlError);
-        }
-
-        $newTarget = json_decode((string) $createResponse, true);
-        if ($newTarget === null) {
-            throw new Exception('Failed to decode JSON response');
-        }
-        $wsUrl = '';
-        $targetId = '';
-        if (isset($newTarget['webSocketDebuggerUrl'])) {
-            $wsUrl = $newTarget['webSocketDebuggerUrl'];
-            $targetId = $newTarget['id'] ?? '';
-        } else {
-            throw new Exception('No WebSocket URL in new target response');
-        }
+        // Create a new target/page
+        $this->logger->debug('Creating a new Chrome tab');
+        $tabInfo = $this->createChromeTab();
+        $wsUrl = $tabInfo['wsUrl'];
+        $targetId = $tabInfo['targetId'];
 
         $this->logger->debug('WebSocket URL: ' . $wsUrl);
         $this->logger->debug('Target ID: ' . $targetId);
@@ -106,6 +85,17 @@ class WebpageFetcher
         $client = new WebSocket\Client($wsUrl, $options);
 
         try {
+            // Enable Page domain
+            $enableMessage = json_encode([
+                'id' => 0,
+                'method' => 'Page.enable',
+            ]);
+            if ($enableMessage === false) {
+                throw new Exception('Failed to encode Page.enable message');
+            }
+            $this->logger->debug('Sending Page.enable command: ' . $enableMessage);
+            $client->send($enableMessage);
+
             // Navigate to the URL
             $navigateMessage = json_encode([
                 'id' => 1,
@@ -123,6 +113,7 @@ class WebpageFetcher
             do {
                 $response = $client->receive();
                 $data = json_decode($response, true);
+                $this->logger->debug('Received WebSocket message: ' . $response);
                 if ($data === null) {
                     continue;
                 }
@@ -174,27 +165,8 @@ class WebpageFetcher
                 $this->logger->debug('Closing WebSocket connection');
                 $client->close();
 
-                // Close the Chrome tab if we have a target ID
-                if (!empty($targetId)) {
-                    $this->logger->debug('Closing Chrome tab with ID: ' . $targetId);
-
-                    $ch = curl_init("http://{$this->devtoolsHost}:{$this->devtoolsPort}/json/close/{$targetId}");
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Add timeout to prevent hanging
-
-                    $result = curl_exec($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-                    if ($result === false) {
-                        $this->logger->error('Error closing Chrome tab: ' . curl_error($ch));
-                    } else {
-                        $this->logger->debug('Chrome tab closed successfully (HTTP ' . $httpCode . ')');
-                    }
-
-                    curl_close($ch);
-                } else {
-                    $this->logger->warning('No target ID available for cleanup');
-                }
+                // Close the Chrome tab
+                $this->closeChromeTab($targetId);
             } catch (Exception $e) {
                 $this->logger->error('Error during cleanup: ' . $e->getMessage());
             }

@@ -13,15 +13,11 @@ declare(strict_types=1);
 // https://freshrss.github.io/FreshRSS/en/developers/03_Backend/05_Extensions.html
 //
 // TODO:
-// - Tests (need to implement dependency injection of fetchers first to avoid mocking stuff)
 // - Consistent naming (primarily of config variables)
 // - Examples of using with docker (chrome + ollama + freshrss)
 // - Set up builds
 // - Handle situations when ollama is not available
 // - Handle ollama auth
-// - Very thorough logging of all the requests and responses in debug mode
-// - i don't need cookies extension for chrome
-// - set up vim lsp for php
 //
 // nix-shell -p php83Packages.php-cs-fixer --pure --command 'php-cs-fixer fix extension.php'
 // nix-shell -p php83Packages.composer --pure --run 'composer install'
@@ -41,10 +37,15 @@ require_once dirname(__FILE__) . '/Logger.php';
 require_once dirname(__FILE__) . '/WebpageFetcher.php';
 require_once dirname(__FILE__) . '/OllamaClient.php';
 require_once dirname(__FILE__) . '/EntryProcessor.php';
+require_once dirname(__FILE__) . '/Configuration.php';
+
+$defaultConfig = require dirname(__FILE__) . '/config-user.default.php';
 
 class FreshrssOllamaExtension extends Minz_Extension
 {
     private ?EntryProcessor $processor = null;
+
+    private ?Configuration $configuration = null;
 
     public function init(): void
     {
@@ -53,23 +54,34 @@ class FreshrssOllamaExtension extends Minz_Extension
         $this->registerHook('entry_before_display', [$this, 'modifyEntryDisplay']);
     }
 
+    private function getConfiguration(): Configuration
+    {
+        if ($this->configuration === null) {
+            $userConf = FreshRSS_Context::$user_conf;
+            if ($userConf === null) {
+                throw new Exception('User configuration is null');
+            }
+            $this->configuration = Configuration::fromUserConfiguration($userConf);
+        }
+
+        return $this->configuration;
+    }
+
     private function getProcessor(Logger $logger): EntryProcessor
     {
-        $userConf = FreshRSS_Context::$user_conf;
-        if ($userConf === null) {
-            throw new Exception('User configuration is null');
-        }
+        $config = $this->getConfiguration();
         $webpageFetcher = new WebpageFetcher(
             $logger,
-            $userConf->attributeString('freshrss_ollama_chrome_host') ?? 'localhost',
-            $userConf->attributeInt('freshrss_ollama_chrome_port') ?? 9222
+            $config->getChromeHost(),
+            $config->getChromePort()
         );
         $ollamaClient = new OllamaClientImpl(
             $logger,
-            $userConf->attributeString('freshrss_ollama_ollama_host') ?? 'http://localhost:11434',
-            $userConf->attributeString('freshrss_ollama_ollama_model') ?? 'llama3',
-            $userConf->attributeArray('freshrss_ollama_model_options') ?? [],
-            $userConf->attributeInt('freshrss_ollama_context_length') ?? 8192
+            $config->getOllamaHost(),
+            $config->getOllamaModel(),
+            $config->getModelOptions(),
+            $config->getContextLength(),
+            $config->getPromptTemplate()
         );
 
         return new EntryProcessor($logger, $webpageFetcher, $ollamaClient);
@@ -83,34 +95,27 @@ class FreshrssOllamaExtension extends Minz_Extension
         if (Minz_Request::isPost()) {
             Minz_Log::debug(LOG_PREFIX . ': Processing configuration form submission');
 
-            // Get and log form values
-            $chrome_host = Minz_Request::paramString('chrome_host');
-            $chrome_port = Minz_Request::paramInt('chrome_port');
-            $ollama_host = Minz_Request::paramString('ollama_host');
-            $ollama_model = Minz_Request::paramString('ollama_model');
-            $num_tags = Minz_Request::paramInt('num_tags');
-            $summary_length = Minz_Request::paramInt('summary_length');
-            $context_length = Minz_Request::paramInt('context_length');
-
-            // Strip trailing slash from ollama_host
-            $ollama_host = rtrim($ollama_host, '/');
-
-            Minz_Log::debug(LOG_PREFIX . ": Config values - Chrome: $chrome_host:$chrome_port, Ollama: $ollama_host, Model: $ollama_model");
-
-            // Save configuration
-            $userConf = FreshRSS_Context::$user_conf;
-            if ($userConf === null) {
-                throw new Exception('User configuration is null');
-            }
-            $userConf->_attribute('freshrss_ollama_chrome_host', $chrome_host);
-            $userConf->_attribute('freshrss_ollama_chrome_port', $chrome_port);
-            $userConf->_attribute('freshrss_ollama_ollama_host', $ollama_host);
-            $userConf->_attribute('freshrss_ollama_ollama_model', $ollama_model);
-            $userConf->_attribute('freshrss_ollama_num_tags', $num_tags);
-            $userConf->_attribute('freshrss_ollama_summary_length', $summary_length);
-            $userConf->_attribute('freshrss_ollama_context_length', $context_length);
-
             try {
+                $config = new Configuration(
+                    chromeHost: Minz_Request::paramString('chrome_host'),
+                    chromePort: Minz_Request::paramInt('chrome_port'),
+                    ollamaHost: rtrim(Minz_Request::paramString('ollama_host'), '/'),
+                    ollamaModel: Minz_Request::paramString('ollama_model'),
+                    modelOptions: Minz_Request::paramArray('model_options'),
+                    promptLengthLimit: Minz_Request::paramInt('prompt_length_limit'),
+                    contextLength: Minz_Request::paramInt('context_length'),
+                    promptTemplate: Minz_Request::paramString('prompt_template'),
+                );
+
+                $userConf = FreshRSS_Context::$user_conf;
+                if ($userConf === null) {
+                    throw new Exception('User configuration is null');
+                }
+
+                foreach ($config->toArray() as $key => $value) {
+                    $userConf->_attribute($key, $value);
+                }
+
                 $saved = $userConf->save();
                 Minz_Log::debug(LOG_PREFIX . ': Configuration saved: ' . ($saved ? 'success' : 'failed'));
 
@@ -118,10 +123,14 @@ class FreshrssOllamaExtension extends Minz_Extension
                     throw new Exception('Failed to save configuration');
                 }
 
-                // Reset processor to use new configuration
+                // Reset processor and configuration to use new values
                 $this->processor = null;
+                $this->configuration = null;
 
                 Minz_Request::good(Minz_Translate::t('feedback.conf.updated'));
+            } catch (InvalidArgumentException $e) {
+                Minz_Log::error(LOG_PREFIX . ': Invalid configuration: ' . $e->getMessage());
+                Minz_Request::bad(Minz_Translate::t('feedback.conf.error') . ': ' . $e->getMessage());
             } catch (Exception $e) {
                 Minz_Log::error(LOG_PREFIX . ': Error saving configuration: ' . $e->getMessage());
                 Minz_Request::bad(Minz_Translate::t('feedback.conf.error'));
@@ -133,6 +142,7 @@ class FreshrssOllamaExtension extends Minz_Extension
 
     public function handleTestFetchAction(): void
     {
+        $defaultConfig = require dirname(__FILE__) . '/config-user.default.php';
         if (!Minz_Request::isPost()) {
             Minz_Request::bad(Minz_Translate::t('feedback.access.denied'));
 
@@ -154,8 +164,8 @@ class FreshrssOllamaExtension extends Minz_Extension
             }
             $fetcher = new WebpageFetcher(
                 $logger,
-                $userConf->attributeString('freshrss_ollama_chrome_host') ?? 'localhost',
-                $userConf->attributeInt('freshrss_ollama_chrome_port') ?? 9222
+                $userConf->attributeString('freshrss_ollama_chrome_host') ?? $defaultConfig['freshrss_ollama_chrome_host'],
+                $userConf->attributeInt('freshrss_ollama_chrome_port') ?? $defaultConfig['freshrss_ollama_chrome_port']
             );
 
             $content = $fetcher->fetchContent($url, 'article');
@@ -186,7 +196,11 @@ class FreshrssOllamaExtension extends Minz_Extension
         $prefix = LOG_PREFIX . " [id:{$entryIdHash}] [start_timestamp:{$timestamp}]";
         $logger = new Logger($prefix);
 
-        return $this->getProcessor($logger)->processEntry($entry);
+        if ($this->processor === null) {
+            $this->processor = $this->getProcessor($logger);
+        }
+
+        return $this->processor->processEntry($entry);
     }
 
     public function modifyEntryDisplay(FreshRSS_Entry $entry): FreshRSS_Entry

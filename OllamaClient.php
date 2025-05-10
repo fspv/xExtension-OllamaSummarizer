@@ -7,15 +7,13 @@ interface OllamaClient
     /**
      * Generate a summary and tags for the given content.
      *
-     * @param string $content       The content to summarize
-     * @param int    $summaryLength The desired length of the summary in words
-     * @param int    $numTags       The number of tags to generate
+     * @param string $content The content to summarize
      *
      * @throws Exception If the generation fails
      *
      * @return array{summary: string, tags: string[]} The generated summary and tags
      */
-    public function generateSummary(string $content, int $summaryLength = 150, int $numTags = 5): array;
+    public function generateSummary(string $content): array;
 }
 
 class OllamaClientImpl implements OllamaClient
@@ -30,21 +28,33 @@ class OllamaClientImpl implements OllamaClient
 
     private int $promptLengthLimit;
 
+    private string $promptTemplate;
+
+    /**
+     * @param Logger              $logger
+     * @param string              $ollamaHost
+     * @param string              $ollamaModel
+     * @param array<string,mixed> $modelOptions      Additional options to pass to the Ollama model
+     * @param int                 $promptLengthLimit
+     * @param string              $promptTemplate    The template for the prompt with placeholders: {summary_length}, {num_tags}, {content}
+     */
     public function __construct(
         Logger $logger,
-        string $ollamaHost = 'http://localhost:11434',
-        string $ollamaModel = 'llama3',
-        array $modelOptions = [],
-        int $promptLengthLimit = 8192
+        string $ollamaHost,
+        string $ollamaModel,
+        array $modelOptions,
+        int $promptLengthLimit,
+        string $promptTemplate
     ) {
         $this->logger = $logger;
         $this->ollamaHost = rtrim($ollamaHost, '/');
         $this->ollamaModel = $ollamaModel;
         $this->modelOptions = $modelOptions;
         $this->promptLengthLimit = $promptLengthLimit;
+        $this->promptTemplate = $promptTemplate;
     }
 
-    public function generateSummary(string $content, int $summaryLength = 150, int $numTags = 5): array
+    public function generateSummary(string $content): array
     {
         $this->logger->debug('Starting Ollama summary generation');
 
@@ -56,14 +66,7 @@ class OllamaClientImpl implements OllamaClient
 
         $this->logger->debug('Content length: ' . strlen($content) . ' bytes');
 
-        $summaryPrompt = <<<EOT
-Based on the following article content, please provide:
-1. A concise summary (around $summaryLength words)
-2. $numTags relevant tags (single words or short phrases)
-
-Article content:
-$content
-EOT;
+        $summaryPrompt = $this->promptTemplate . "\n\n" . $content;
 
         // Truncate prompt if it exceeds the limit
         if (strlen($summaryPrompt) > $this->promptLengthLimit) {

@@ -16,12 +16,15 @@ class TestOllamaClient implements OllamaClient
         $this->logger = $logger;
     }
 
+    /**
+     * @param array $response The test response array containing 'summary' and 'tags' keys
+     */
     public function setResponse(array $response): void
     {
         $this->response = $response;
     }
 
-    public function generateSummary(string $content, int $summaryLength = 150, int $numTags = 5): array
+    public function generateSummary(string $content): array
     {
         if ($this->response === null) {
             throw new RuntimeException('Test response not set. Call setResponse() first.');

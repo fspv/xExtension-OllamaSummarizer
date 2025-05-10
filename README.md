@@ -19,51 +19,9 @@ This extension integrates FreshRSS with Ollama to automatically generate summari
 
 ## Installation
 
-1. Clone the repo into the `extensions` dir.
-2. Modify your docker compose to add the websockets library via PHP composer
-```yaml
-  freshrss:
-    build:
-      context: .
-      dockerfile_inline:
-        FROM freshrss/freshrss:edge
-        RUN apt-get update -y
-        RUN apt-get upgrade -y
-        RUN apt-get install -y composer
-        RUN composer require textalk/websocket
-```
-3. Run chrome with remote debugging enabled:
-```
-  chrome:
-    image: gcr.io/zenika-hub/alpine-chrome:123
-    restart: unless-stopped
-    container_name: chrome
-    command:
-      - --no-sandbox
-      - --disable-gpu
-      - --disable-dev-shm-usage
-      - --remote-debugging-address=127.0.0.1
-      - --remote-debugging-port=9222
-      - --hide-scrollbars
-      - --disable-extensions-except=/chrome/extensions/isdcac
-      - --load-extension=/chrome/extensions/isdcac
-      - --enable-logging
-      - --verbose
-      - --log-level=debug
-      # - --v=3 # full debug
-      - --enable-features=ConversionMeasurement,AttributionReportingCrossAppWeb
-```
+See a minimal working example in the [docker-compose.yml](/docker-compose.yml).
 
-## Configuration
-
-1. Enable the extension in FreshRSS Extensions Manager
-2. Configure the extension settings:
-   - **Chrome Host**: The hostname or IP where Chrome is running (default: localhost)
-   - **Chrome Port**: The Chrome DevTools port (default: 9222)
-   - **Ollama Host**: The URL of your Ollama server (default: http://localhost:11434)
-   - **Ollama Model**: The LLM model to use (default: llama3)
-   - **Number of Tags**: How many tags to generate per article (default: 5)
-   - **Summary Length**: Target length for article summaries in words (default: 150)
+You need to clone the extension in the `./freshrss/extensions` dir and spawn chrome and ollama services.
 
 ## How It Works
 
@@ -72,7 +30,7 @@ This extension integrates FreshRSS with Ollama to automatically generate summari
 3. The fetched content is sent to Ollama with a prompt to generate a summary and tags
 4. The generated summary is appended to the article content with an `<hr/>` separator
 5. The generated tags are added to the entry
-6. The entry is marked with the tag `ollama-processed` to prevent reprocessing
+6. The entry is marked with the tag `ai-processed` to prevent reprocessing
 
 ## Troubleshooting
 
@@ -81,21 +39,14 @@ This extension integrates FreshRSS with Ollama to automatically generate summari
 - Verify Ollama is running and accessible from your FreshRSS instance
 - Make sure the WebSocket PHP library is correctly installed
 
-## Advanced Configuration
-
-The extension supports the following configuration options which can be set via the UI:
-
-- `chrome_host`: Hostname where Chrome is running
-- `chrome_port`: Port for Chrome DevTools Protocol
-- `ollama_host`: URL for Ollama API
-- `ollama_model`: Model name to use for generation
-- `num_tags`: Number of tags to generate
-- `summary_length`: Target summary length in words
-
-## License
-
-[License information here]
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+Before submitting a Pull Request make sure to run all the tests and lints like this:
+
+```sh
+sudo docker build -t test .
+```
+
+Additionally, run the application with a provided minimal docker compose file with `docker compose up` and try to check if the extension is actually working.

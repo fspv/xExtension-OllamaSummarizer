@@ -86,9 +86,7 @@ class EntryProcessor
                 if ($userConf === null) {
                     throw new Exception('User configuration is null');
                 }
-                $summaryLength = $userConf->attributeInt('freshrss_ollama_summary_length') ?? 150;
-                $numTags = $userConf->attributeInt('freshrss_ollama_num_tags') ?? 5;
-                $result = $this->ollamaClient->generateSummary($content, $summaryLength, $numTags);
+                $result = $this->ollamaClient->generateSummary($content);
 
                 if (empty($result['summary']) || empty($result['tags'])) {
                     $this->logger->debug('Empty response from Ollama');

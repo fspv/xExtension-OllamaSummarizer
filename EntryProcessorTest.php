@@ -36,8 +36,6 @@ class EntryProcessorTest extends TestCase
             public function attributeInt(string $key): ?int
             {
                 return match ($key) {
-                    'freshrss_ollama_summary_length' => 150,
-                    'freshrss_ollama_num_tags' => 5,
                     default => null
                 };
             }
@@ -213,7 +211,9 @@ class EntryProcessorTest extends TestCase
 
         // Verify debug information
         $this->assertTrue($processedEntry->hasAttribute('ai-debug'));
-        $debugInfo = json_decode($processedEntry->attributeString('ai-debug'), true);
+        $debugInfoStr = $processedEntry->attributeString('ai-debug');
+        $this->assertNotNull($debugInfoStr);
+        $debugInfo = json_decode($debugInfoStr, true);
         $this->assertIsArray($debugInfo);
         $this->assertArrayHasKey('content', $debugInfo);
         $this->assertArrayHasKey('ollamaResponse', $debugInfo);

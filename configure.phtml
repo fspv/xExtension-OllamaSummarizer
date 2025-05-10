@@ -1,118 +1,89 @@
 <?php
 // Configuration view for the FreshRSS Ollama extension
 // Save as: ./extensions/FreshrssOllamaExtension/configure.phtml
+
+require_once __DIR__ . '/Configuration.php';
+$defaults = Configuration::createDefault();
+if (FreshRSS_Context::$user_conf) {
+    $config = Configuration::fromUserConfiguration(FreshRSS_Context::$user_conf);
+} else {
+    $config = $defaults;
+}
 ?>
 
-<form action="<?php echo _url('extension', 'configure', 'e',  urlencode($this->getName())); ?>" method="post">
+/** @var FreshrssOllamaExtension $this */
+<form action="<?php echo _url('extension', 'configure', 'e', urlencode($this->getName())); ?>" method="post">
     <input type="hidden" name="_csrf" value="<?php echo FreshRSS_Auth::csrfToken(); ?>" />
     <div class="form-group">
-        <label class="group-name" for="chrome_host"><?php echo _t('Chrome Host'); ?></label>
+        <label class="group-name" for="chrome_host"><?php echo _t('ext.freshrss_ollama.chrome_host'); ?></label>
         <div class="group-controls">
-            <input type="text" name="chrome_host" id="chrome_host" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_chrome_host ?? 'localhost'; ?>" />
-            <p class="help"><?php echo _t('Hostname where Chrome is running with remote debugging enabled (only used if "Use Chrome" is checked)'); ?></p>
+            <input type="text" name="chrome_host" id="chrome_host" value="<?php echo $config->getChromeHost(); ?>" />
+            <p class="help"><?php echo _t('ext.freshrss_ollama.chrome_host_help'); ?></p>
         </div>
     </div>
 
     <div class="form-group">
-        <label class="group-name" for="chrome_port"><?php echo _t('Chrome Port'); ?></label>
+        <label class="group-name" for="chrome_port"><?php echo _t('ext.freshrss_ollama.chrome_port'); ?></label>
         <div class="group-controls">
-            <input type="number" name="chrome_port" id="chrome_port" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_chrome_port ?? 9222; ?>" />
-            <p class="help"><?php echo _t('Debug port for Chrome (default: 9222, only used if "Use Chrome" is checked)'); ?></p>
+            <input type="number" name="chrome_port" id="chrome_port" value="<?php echo $config->getChromePort(); ?>" />
+            <p class="help"><?php echo _t('ext.freshrss_ollama.chrome_port_help'); ?></p>
         </div>
     </div>
 
     <div class="form-group">
-        <label class="group-name" for="ollama_host"><?php echo _t('Ollama Host'); ?></label>
+        <label class="group-name" for="ollama_host"><?php echo _t('ext.freshrss_ollama.ollama_host'); ?></label>
         <div class="group-controls">
-            <input type="text" name="ollama_host" id="ollama_host" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_ollama_host ?? 'http://localhost:11434'; ?>" />
-            <p class="help"><?php echo _t('URL of the Ollama API endpoint (default: http://localhost:11434)'); ?></p>
+            <input type="text" name="ollama_host" id="ollama_host" value="<?php echo $config->getOllamaHost(); ?>" />
+            <p class="help"><?php echo _t('ext.freshrss_ollama.ollama_host_help'); ?></p>
         </div>
     </div>
 
     <div class="form-group">
-        <label class="group-name" for="ollama_model"><?php echo _t('Ollama Model'); ?></label>
+        <label class="group-name" for="ollama_model"><?php echo _t('ext.freshrss_ollama.ollama_model'); ?></label>
         <div class="group-controls">
-            <input type="text" name="ollama_model" id="ollama_model" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_ollama_model ?? 'llama3'; ?>" />
-            <p class="help"><?php echo _t('The model name to use for summarization (e.g., llama3, mistral, gemma)'); ?></p>
+            <input type="text" name="ollama_model" id="ollama_model" value="<?php echo $config->getOllamaModel(); ?>" />
+            <p class="help"><?php echo _t('ext.freshrss_ollama.ollama_model_help'); ?></p>
         </div>
     </div>
 
     <div class="form-group">
-        <label class="group-name" for="num_tags"><?php echo _t('Number of Tags'); ?></label>
+        <label class="group-name" for="prompt_template"><?php echo _t('ext.freshrss_ollama.prompt_template'); ?></label>
         <div class="group-controls">
-            <input type="number" name="num_tags" id="num_tags" min="1" max="10" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_num_tags ?? 5; ?>" />
-            <p class="help"><?php echo _t('Number of tags to generate for each article'); ?></p>
+            <textarea name="prompt_template" id="prompt_template" rows="6" style="width: 100%;"><?php echo htmlspecialchars($config->getPromptTemplate()); ?></textarea>
+            <p class="help"><?php echo _t('ext.freshrss_ollama.prompt_template_help'); ?></p>
         </div>
     </div>
 
     <div class="form-group">
-        <label class="group-name" for="summary_length"><?php echo _t('Summary Length'); ?></label>
+        <label class="group-name" for="prompt_length_limit"><?php echo _t('ext.freshrss_ollama.prompt_length_limit'); ?></label>
         <div class="group-controls">
-            <input type="number" name="summary_length" id="summary_length" min="50" max="500" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_summary_length ?? 150; ?>" />
-            <p class="help"><?php echo _t('Target length of the summary in words'); ?></p>
+            <input type="number" name="prompt_length_limit" id="prompt_length_limit" min="1024" max="32768" value="<?php echo $config->getPromptLengthLimit(); ?>" />
+            <p class="help"><?php echo _t('ext.freshrss_ollama.prompt_length_limit_help'); ?></p>
         </div>
     </div>
 
     <div class="form-group">
-        <label class="group-name" for="prompt_length_limit"><?php echo _t('Prompt Length Limit'); ?></label>
+        <label class="group-name" for="context_length"><?php echo _t('ext.freshrss_ollama.context_length'); ?></label>
         <div class="group-controls">
-            <input type="number" name="prompt_length_limit" id="prompt_length_limit" min="1024" max="32768" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_prompt_length_limit ?? 8192; ?>" />
-            <p class="help"><?php echo _t('Maximum length of the prompt in characters (default: 8192, approximately 2048 tokens)'); ?></p>
-        </div>
-    </div>
-
-    <div class="form-group">
-        <label class="group-name" for="context_length"><?php echo _t('Context Length'); ?></label>
-        <div class="group-controls">
-            <input type="number" name="context_length" id="context_length" min="1024" max="32768" value="<?php echo FreshRSS_Context::$user_conf->freshrss_ollama_context_length ?? 4096; ?>" />
-            <p class="help"><?php echo _t('Context length for the model in tokens (default: 4096)'); ?></p>
+            <input type="number" name="context_length" id="context_length" min="1024" max="32768" value="<?php echo $config->getContextLength(); ?>" />
+            <p class="help"><?php echo _t('ext.freshrss_ollama.context_length_help'); ?></p>
         </div>
     </div>
 
     <div class="form-group form-actions">
         <div class="group-controls">
-            <button type="submit" class="btn btn-important"><?php echo _t('Save'); ?></button>
+            <button type="submit" class="btn btn-important"><?= _t('gen.action.submit'); ?></button>
+            <button type="reset" class="btn"><?= _t('gen.action.cancel'); ?></button>
         </div>
     </div>
 </form>
 
-<h3>Setup Instructions</h3>
-<ol>
-    <li>
-        <strong>Chrome Setup:</strong> You need to run Chrome/Chromium with remote debugging enabled. Start Chrome docker compose:
-        <pre>
-  chrome:
-    image: gcr.io/zenika-hub/alpine-chrome:123
-    restart: unless-stopped
-    container_name: chrome
-    command:
-      - --no-sandbox
-      - --disable-gpu
-      - --disable-dev-shm-usage
-      - --remote-debugging-address=127.0.0.1
-      - --remote-debugging-port=9222
-      - --hide-scrollbars
-      - --disable-extensions-except=/chrome/extensions/isdcac
-      - --load-extension=/chrome/extensions/isdcac
-      - --enable-logging
-      - --verbose
-      - --log-level=debug
-      # - --v=3 # full debug
-      - --enable-features=ConversionMeasurement,AttributionReportingCrossAppWeb
-        </pre>
-    </li>
-    <li>
-        <strong>Ollama Setup:</strong> Install and run Ollama on your server. Make sure it's accessible at the configured host/port.
-    </li>
-    <li>
-        <strong>PHP Requirements:</strong> This extension requires the cURL extension for PHP (ext-curl, available in FreshRSS) and textalk/websocket for WebSocket support (not included in FreshRSS, install via composer).
-    </li>
-</ol>
+<?php
+$readme_path = __DIR__ . '/README.md';
+if (file_exists($readme_path)) {
+    echo '<div class="extension-description">';
+    echo '<pre>' . htmlspecialchars(file_get_contents($readme_path)) . '</pre>';
+    echo '</div>';
+}
+?>
 
-<h3>How It Works</h3>
-<p>When a new RSS item is fetched, this extension:</p>
-<ol>
-    <li>Uses Chrome's debugging protocol to visit the article URL and extract the content</li>
-    <li>Sends the content to Ollama for analysis</li>
-    <li>Adds the generated summary and tags to the RSS item</li>
-</ol>
