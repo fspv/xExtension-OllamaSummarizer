@@ -1,4 +1,4 @@
-# FreshRSS Ollama Extension
+# FreshRSS Ollama Summarizer Extension
 
 This extension integrates FreshRSS with Ollama to automatically generate summaries and tags for your RSS feed entries.
 

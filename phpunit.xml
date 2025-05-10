@@ -24,7 +24,7 @@
          stopOnError="false"
          stopOnNotice="false">
     <testsuites>
-        <testsuite name="FreshRssOllama Test Suite">
+        <testsuite name="Ollama Summarizer Test Suite">
             <directory>.</directory>
             <exclude>vendor</exclude>
         </testsuite>

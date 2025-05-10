@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Configuration class for the FreshRSS Ollama extension.
+ * Configuration class for the Ollama Summarizer extension.
  * This class handles all configuration values and their validation.
  */
 class Configuration
@@ -60,7 +60,7 @@ EOT,
     public static function fromUserConfiguration(FreshRSS_UserConfiguration $userConfig): self
     {
         $defaults = self::createDefault();
-        $modelOptions = $userConfig->attributeArray('freshrss_ollama_model_options') ?? $defaults->getModelOptions();
+        $modelOptions = $userConfig->attributeArray('ollama_summarizer_model_options') ?? $defaults->getModelOptions();
         $modelOptionsValidated = [];
         foreach ($modelOptions as $key => $value) {
             if (!is_string($key)) {
@@ -70,15 +70,15 @@ EOT,
         }
 
         $config = new self(
-            chromeHost: $userConfig->attributeString('freshrss_ollama_chrome_host') ?? $defaults->getChromeHost(),
-            chromePort: $userConfig->attributeInt('freshrss_ollama_chrome_port') ?? $defaults->getChromePort(),
-            ollamaHost: $userConfig->attributeString('freshrss_ollama_ollama_host') ?? $defaults->getOllamaHost(),
-            ollamaModel: $userConfig->attributeString('freshrss_ollama_ollama_model') ?? $defaults->getOllamaModel(),
+            chromeHost: $userConfig->attributeString('ollama_summarizer_chrome_host') ?? $defaults->getChromeHost(),
+            chromePort: $userConfig->attributeInt('ollama_summarizer_chrome_port') ?? $defaults->getChromePort(),
+            ollamaHost: $userConfig->attributeString('ollama_summarizer_ollama_host') ?? $defaults->getOllamaHost(),
+            ollamaModel: $userConfig->attributeString('ollama_summarizer_ollama_model') ?? $defaults->getOllamaModel(),
             modelOptions: $modelOptionsValidated,
-            promptLengthLimit: $userConfig->attributeInt('freshrss_ollama_prompt_length_limit') ?? $defaults->getPromptLengthLimit(),
-            contextLength: $userConfig->attributeInt('freshrss_ollama_context_length') ?? $defaults->getContextLength(),
-            promptTemplate: $userConfig->attributeString('freshrss_ollama_prompt_template') ?? $defaults->getPromptTemplate(),
-            selectedFeeds: $userConfig->attributeArray('freshrss_ollama_selected_feeds') ?? $defaults->getSelectedFeeds(),
+            promptLengthLimit: $userConfig->attributeInt('ollama_summarizer_prompt_length_limit') ?? $defaults->getPromptLengthLimit(),
+            contextLength: $userConfig->attributeInt('ollama_summarizer_context_length') ?? $defaults->getContextLength(),
+            promptTemplate: $userConfig->attributeString('ollama_summarizer_prompt_template') ?? $defaults->getPromptTemplate(),
+            selectedFeeds: $userConfig->attributeArray('ollama_summarizer_selected_feeds') ?? $defaults->getSelectedFeeds(),
         );
         $config->validate();
 
@@ -93,15 +93,15 @@ EOT,
     public function toArray(): array
     {
         return [
-            'freshrss_ollama_chrome_host' => $this->chromeHost,
-            'freshrss_ollama_chrome_port' => $this->chromePort,
-            'freshrss_ollama_ollama_host' => $this->ollamaHost,
-            'freshrss_ollama_ollama_model' => $this->ollamaModel,
-            'freshrss_ollama_model_options' => $this->modelOptions,
-            'freshrss_ollama_prompt_length_limit' => $this->promptLengthLimit,
-            'freshrss_ollama_context_length' => $this->contextLength,
-            'freshrss_ollama_prompt_template' => $this->promptTemplate,
-            'freshrss_ollama_selected_feeds' => $this->selectedFeeds,
+            'ollama_summarizer_chrome_host' => $this->chromeHost,
+            'ollama_summarizer_chrome_port' => $this->chromePort,
+            'ollama_summarizer_ollama_host' => $this->ollamaHost,
+            'ollama_summarizer_ollama_model' => $this->ollamaModel,
+            'ollama_summarizer_model_options' => $this->modelOptions,
+            'ollama_summarizer_prompt_length_limit' => $this->promptLengthLimit,
+            'ollama_summarizer_context_length' => $this->contextLength,
+            'ollama_summarizer_prompt_template' => $this->promptTemplate,
+            'ollama_summarizer_selected_feeds' => $this->selectedFeeds,
         ];
     }
 

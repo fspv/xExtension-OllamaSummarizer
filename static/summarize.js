@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Add debug logging to help identify when the script is loaded
-    console.log('FreshRssOllama summarize.js loaded');
+    console.log('Ollama Summarizer summarize.js loaded');
     
     // Handle button click event
     function handleButtonClick(e) {

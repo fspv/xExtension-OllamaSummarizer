@@ -33,7 +33,7 @@ class FreshExtension_FetchAndSummarizeWithOllama_Controller extends Minz_ActionC
             // Get the extension instance
             /** @psalm-suppress MissingFile */
             require_once dirname(__FILE__) . '/../extension.php';
-            $extension = new FreshrssOllamaExtension(['name' => 'FreshrssOllamaExtension', 'entrypoint' => 'FreshrssOllamaExtension', 'path' => dirname(__FILE__) . '/../']);
+            $extension = new OllamaSummarizerExtension(['name' => 'OllamaSummarizerExtension', 'entrypoint' => 'OllamaSummarizerExtension', 'path' => dirname(__FILE__) . '/../']);
 
             // Process the entry
             $processedEntry = $extension->processEntry($entry, true);

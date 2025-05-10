@@ -31,7 +31,6 @@ COPY phpunit.xml .
 COPY phpstan.neon .
 COPY psalm.xml .
 COPY .php-cs-fixer.dist.php .
-COPY config-user.default.php .
 COPY psalm-baseline.xml .
 COPY psalm.xml .
 # Create a script to run all checks

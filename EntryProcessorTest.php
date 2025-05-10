@@ -40,7 +40,21 @@ class EntryProcessorTest extends TestCase
                 };
             }
         };
-        $userConf = FreshRSS_UserConfiguration::init(dirname(__FILE__) . '/config-user.default.php');
+        $tempFile = tempnam(sys_get_temp_dir(), 'freshrss_test_');
+        file_put_contents($tempFile, '<?php return [
+            "ollama_summarizer_chrome_host" => "custom-host",
+            "ollama_summarizer_chrome_port" => 9999,
+            "ollama_summarizer_ollama_host" => "http://custom-ollama:11434",
+            "ollama_summarizer_ollama_model" => "mistral",
+            "ollama_summarizer_model_options" => ["temperature" => 0.7],
+            "ollama_summarizer_prompt_length_limit" => 4000,
+            "ollama_summarizer_context_length" => 2048,
+            "ollama_summarizer_prompt_template" => "Custom template",
+            "ollama_summarizer_selected_feeds" => [1, 2, 3],
+        ];');
+
+        // Initialize user configuration with our temp file
+        $userConf = FreshRSS_UserConfiguration::init($tempFile);
         FreshRSS_Context::$user_conf = $userConf;
 
         $this->processor = new EntryProcessor(

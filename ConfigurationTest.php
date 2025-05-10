@@ -29,15 +29,15 @@ class ConfigurationTest extends TestCase
         // Create a temporary config file
         $tempFile = tempnam(sys_get_temp_dir(), 'freshrss_test_');
         file_put_contents($tempFile, '<?php return [
-            "freshrss_ollama_chrome_host" => "custom-host",
-            "freshrss_ollama_chrome_port" => 9999,
-            "freshrss_ollama_ollama_host" => "http://custom-ollama:11434",
-            "freshrss_ollama_ollama_model" => "mistral",
-            "freshrss_ollama_model_options" => ["temperature" => 0.7],
-            "freshrss_ollama_prompt_length_limit" => 4000,
-            "freshrss_ollama_context_length" => 2048,
-            "freshrss_ollama_prompt_template" => "Custom template",
-            "freshrss_ollama_selected_feeds" => [1, 2, 3],
+            "ollama_summarizer_chrome_host" => "custom-host",
+            "ollama_summarizer_chrome_port" => 9999,
+            "ollama_summarizer_ollama_host" => "http://custom-ollama:11434",
+            "ollama_summarizer_ollama_model" => "mistral",
+            "ollama_summarizer_model_options" => ["temperature" => 0.7],
+            "ollama_summarizer_prompt_length_limit" => 4000,
+            "ollama_summarizer_context_length" => 2048,
+            "ollama_summarizer_prompt_template" => "Custom template",
+            "ollama_summarizer_selected_feeds" => [1, 2, 3],
         ];');
 
         // Initialize user configuration with our temp file
@@ -66,8 +66,8 @@ class ConfigurationTest extends TestCase
         $tempFile = tempnam(sys_get_temp_dir(), 'freshrss_test_');
         file_put_contents($tempFile, '<?php return [
             // Only specify some values, others will use defaults
-            "freshrss_ollama_chrome_host" => "custom-host",
-            "freshrss_ollama_ollama_model" => "mistral",
+            "ollama_summarizer_chrome_host" => "custom-host",
+            "ollama_summarizer_ollama_model" => "mistral",
         ];');
 
         // Initialize user configuration with our temp file
@@ -110,15 +110,15 @@ class ConfigurationTest extends TestCase
 
         $array = $config->toArray();
 
-        $this->assertEquals('test-host', $array['freshrss_ollama_chrome_host']);
-        $this->assertEquals(1234, $array['freshrss_ollama_chrome_port']);
-        $this->assertEquals('http://test-ollama:11434', $array['freshrss_ollama_ollama_host']);
-        $this->assertEquals('test-model', $array['freshrss_ollama_ollama_model']);
-        $this->assertEquals(['test-option' => 'value'], $array['freshrss_ollama_model_options']);
-        $this->assertEquals(5000, $array['freshrss_ollama_prompt_length_limit']);
-        $this->assertEquals(3000, $array['freshrss_ollama_context_length']);
-        $this->assertEquals('Test prompt template', $array['freshrss_ollama_prompt_template']);
-        $this->assertEquals([5, 6, 7], $array['freshrss_ollama_selected_feeds']);
+        $this->assertEquals('test-host', $array['ollama_summarizer_chrome_host']);
+        $this->assertEquals(1234, $array['ollama_summarizer_chrome_port']);
+        $this->assertEquals('http://test-ollama:11434', $array['ollama_summarizer_ollama_host']);
+        $this->assertEquals('test-model', $array['ollama_summarizer_ollama_model']);
+        $this->assertEquals(['test-option' => 'value'], $array['ollama_summarizer_model_options']);
+        $this->assertEquals(5000, $array['ollama_summarizer_prompt_length_limit']);
+        $this->assertEquals(3000, $array['ollama_summarizer_context_length']);
+        $this->assertEquals('Test prompt template', $array['ollama_summarizer_prompt_template']);
+        $this->assertEquals([5, 6, 7], $array['ollama_summarizer_selected_feeds']);
     }
 
     public function testIsFeedSelected(): void

@@ -39,9 +39,7 @@ require_once dirname(__FILE__) . '/OllamaClient.php';
 require_once dirname(__FILE__) . '/EntryProcessor.php';
 require_once dirname(__FILE__) . '/Configuration.php';
 
-$defaultConfig = require dirname(__FILE__) . '/config-user.default.php';
-
-class FreshrssOllamaExtension extends Minz_Extension
+class OllamaSummarizerExtension extends Minz_Extension
 {
     private ?EntryProcessor $processor = null;
 
