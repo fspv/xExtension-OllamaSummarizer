@@ -54,7 +54,7 @@ jobs:
         run: composer dump-autoload
 
       - name: Run PHPStan
-        run: vendor/bin/phpstan analyse --level=max
+        run: vendor/bin/phpstan analyse
 
   psalm:
     name: Psalm
