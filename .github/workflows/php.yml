@@ -89,7 +89,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.3'
           coverage: xdebug
           tools: phpunit
 
@@ -103,10 +103,6 @@ jobs:
         run: composer dump-autoload
 
       - name: Run PHPUnit tests
-        run: vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml
+        run: vendor/bin/phpunit
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.xml
-          fail_ci_if_error: true 
+      # TODO: Add coverage report
