@@ -19,12 +19,12 @@ jobs:
           php-version: '8.2'
           coverage: none
           tools: cs2pr
+
+      - name: Clone FreshRSS
+        run: mkdir -p vendor && git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
           
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist --optimize-autoloader
-
-      - name: Clone FreshRSS
-        run: git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
 
       - name: Dump autoload
         run: composer dump-autoload
@@ -43,12 +43,12 @@ jobs:
         with:
           php-version: '8.2'
           coverage: none
+
+      - name: Clone FreshRSS
+        run: mkdir -p vendor && git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
           
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist --optimize-autoloader
-        
-      - name: Clone FreshRSS
-        run: git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
 
       - name: Dump autoload
         run: composer dump-autoload
@@ -67,12 +67,12 @@ jobs:
         with:
           php-version: '8.2'
           coverage: none
-          
+
+      - name: Clone FreshRSS
+        run: mkdir -p vendor && git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
+
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist --optimize-autoloader
-        
-      - name: Clone FreshRSS
-        run: git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
 
       - name: Dump autoload
         run: composer dump-autoload
