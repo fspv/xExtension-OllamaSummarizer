@@ -57,3 +57,14 @@ Make sure to test:
 5. Try to press the summarize button on any entry
 6. Try to enable the default feed, delete all articles and then reload articles
 7. Check that all the config options are translated.
+
+## Dev tips
+
+Extensions guide https://freshrss.github.io/FreshRSS/en/developers/03_Backend/05_Extensions.html
+
+Some stuff to make php lsp work
+```sh
+nix-shell -p php83Packages.php-cs-fixer --pure --command 'php-cs-fixer fix extension.php'
+nix-shell -p php83Packages.composer --pure --run 'composer install'
+git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
+```

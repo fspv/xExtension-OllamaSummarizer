@@ -9,18 +9,6 @@ declare(strict_types=1);
  * Version: 0.1.1.
  */
 
-// Extensions guide
-// https://freshrss.github.io/FreshRSS/en/developers/03_Backend/05_Extensions.html
-//
-// TODO:
-// - Set up builds
-// - Handle ollama auth
-// - move retry settings to config
-//
-// nix-shell -p php83Packages.php-cs-fixer --pure --command 'php-cs-fixer fix extension.php'
-// nix-shell -p php83Packages.composer --pure --run 'composer install'
-// git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
-
 $relativeAutoloadFile = dirname(__FILE__) . '/../../vendor/autoload.php';
 $topLevelAutoloadFile = dirname(__FILE__) . '/vendor/autoload.php';
 
