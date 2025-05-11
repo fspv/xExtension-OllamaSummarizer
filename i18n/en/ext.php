@@ -10,6 +10,8 @@ return [
         'ollama_host_help' => 'URL of the Ollama API endpoint',
         'ollama_model' => 'Ollama Model',
         'ollama_model_help' => 'The model name to use for summarization',
+        'ollama_not_connected' => 'Ollama not connected, please update the Ollama URL and reload the page',
+        'ollama_model_not_selected' => 'Not selected',
         'prompt_template' => 'Prompt Template',
         'prompt_template_help' => 'Template for the prompt sent to Ollama',
         'prompt_length_limit' => 'Prompt Length Limit',

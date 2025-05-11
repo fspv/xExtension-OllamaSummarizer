@@ -120,10 +120,6 @@ EOT,
             throw new InvalidArgumentException('Invalid Ollama host URL');
         }
 
-        if (empty($this->ollamaModel)) {
-            throw new InvalidArgumentException('Ollama model name cannot be empty');
-        }
-
         if ($this->promptLengthLimit < 1024 || $this->promptLengthLimit > 32768) {
             throw new InvalidArgumentException('Prompt length limit must be between 1024 and 32768');
         }

@@ -178,24 +178,6 @@ class ConfigurationTest extends TestCase
         );
     }
 
-    public function testValidationEmptyOllamaModel(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Ollama model name cannot be empty');
-
-        new Configuration(
-            'localhost',
-            9222,
-            'http://localhost:11434',
-            '', // Empty model name
-            [],
-            8192,
-            4096,
-            'Test prompt',
-            []
-        );
-    }
-
     public function testValidationInvalidPromptLengthLimit(): void
     {
         $this->expectException(InvalidArgumentException::class);
