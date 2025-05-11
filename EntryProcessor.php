@@ -52,12 +52,6 @@ class EntryProcessor
             return $entry;
         }
 
-        if (!$force && $entry->isUpdated()) {
-            $this->logger->debug('Entry is updated, skipping');
-
-            return $entry;
-        }
-
         $url = $entry->link();
 
         if (empty($url)) {
