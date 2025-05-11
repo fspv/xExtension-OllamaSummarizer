@@ -8,7 +8,6 @@ declare(strict_types=1);
  * Description: Fetches article content using Chrome and uses Ollama to generate tags and summaries
  * Version: 0.1.1.
  */
-
 $relativeAutoloadFile = dirname(__FILE__) . '/../../vendor/autoload.php';
 $topLevelAutoloadFile = dirname(__FILE__) . '/vendor/autoload.php';
 

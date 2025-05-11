@@ -1,6 +1,6 @@
 # FreshRSS Ollama Summarizer Extension
 
-This extension integrates FreshRSS with Ollama to automatically generate summaries and tags for your RSS feed entries.
+This extension integrates FreshRSS with Ollama to automatically generate summaries and tags for your RSS feed entries. All you need is a running chrome browser instance and ollama. You can run LLM inference on the CPU, small models like gemma3:1b are more than enough to generate quality summaries.
 
 ## Features
 
