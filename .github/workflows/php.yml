@@ -79,3 +79,34 @@ jobs:
 
       - name: Run Psalm
         run: vendor/bin/psalm --no-cache 
+
+  phpunit:
+    name: PHPUnit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: xdebug
+          tools: phpunit
+
+      - name: Clone FreshRSS
+        run: mkdir -p vendor && git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
+
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Dump autoload
+        run: composer dump-autoload
+
+      - name: Run PHPUnit tests
+        run: vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true 
