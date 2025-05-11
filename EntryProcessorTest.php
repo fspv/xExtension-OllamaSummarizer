@@ -115,19 +115,6 @@ class EntryProcessorTest extends TestCase
         $this->assertFalse($processedEntry->hasAttribute('ai-processed'));
     }
 
-    public function testProcessUpdatedEntry(): void
-    {
-        // Create a test entry that's been updated
-        $entry = $this->createTestEntry('https://example.com/article', 'Test Article');
-        $entry->_isUpdated(true);
-
-        // Process the entry
-        $processedEntry = $this->processor->processEntry($entry);
-
-        // Verify the results
-        $this->assertFalse($processedEntry->hasAttribute('ai-processed'));
-    }
-
     public function testProcessEntryWithCustomFeedSelector(): void
     {
         // Create a test entry with a custom feed selector

@@ -26,10 +26,6 @@ require_once dirname(__FILE__) . '/Configuration.php';
 
 class OllamaSummarizerExtension extends Minz_Extension
 {
-    private ?EntryProcessor $processor = null;
-
-    private ?Configuration $configuration = null;
-
     public function init(): void
     {
         Minz_Log::debug(LOG_PREFIX . ': Initializing');
@@ -42,22 +38,19 @@ class OllamaSummarizerExtension extends Minz_Extension
         Minz_View::appendScript($scriptUrl, async: false);
     }
 
-    private function getConfiguration(): Configuration
+    private static function getConfiguration(): Configuration
     {
-        if ($this->configuration === null) {
-            $userConf = FreshRSS_Context::$user_conf;
-            if ($userConf === null) {
-                throw new Exception('User configuration is null');
-            }
-            $this->configuration = Configuration::fromUserConfiguration($userConf);
+        $userConf = FreshRSS_Context::$user_conf;
+        if ($userConf === null) {
+            throw new Exception('User configuration is null');
         }
 
-        return $this->configuration;
+        return Configuration::fromUserConfiguration($userConf);
     }
 
-    private function getProcessor(Logger $logger): EntryProcessor
+    private static function getProcessor(Logger $logger): EntryProcessor
     {
-        $config = $this->getConfiguration();
+        $config = self::getConfiguration();
         $webpageFetcher = new WebpageFetcher(
             $logger,
             $config->getChromeHost(),
@@ -130,10 +123,6 @@ class OllamaSummarizerExtension extends Minz_Extension
                     throw new Exception('Failed to save configuration');
                 }
 
-                // Reset processor and configuration to use new values
-                $this->processor = null;
-                $this->configuration = null;
-
                 Minz_Request::good(Minz_Translate::t('feedback.conf.updated'));
             } catch (InvalidArgumentException $e) {
                 Minz_Log::error(LOG_PREFIX . ': Invalid configuration: ' . $e->getMessage());
@@ -147,51 +136,6 @@ class OllamaSummarizerExtension extends Minz_Extension
         }
     }
 
-    public function handleTestFetchAction(): void
-    {
-        if (!Minz_Request::isPost()) {
-            Minz_Request::bad(Minz_Translate::t('feedback.access.denied'));
-
-            return;
-        }
-
-        $url = Minz_Request::paramString('url');
-        if (empty($url)) {
-            Minz_Request::bad(Minz_Translate::t('feedback.invalid_url'));
-
-            return;
-        }
-
-        try {
-            $logger = new Logger(LOG_PREFIX);
-            $config = $this->getConfiguration();
-            $fetcher = new WebpageFetcher(
-                $logger,
-                $config->getChromeHost(),
-                $config->getChromePort(),
-                $config->getMaxRetries(),
-                $config->getRetryDelayMilliseconds()
-            );
-
-            $content = $fetcher->fetchContent($url, 'article');
-
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success' => true,
-                'content' => $content,
-            ]);
-            exit;
-        } catch (Exception $e) {
-            Minz_Log::error(LOG_PREFIX . ': Error testing fetch: ' . $e->getMessage());
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success' => false,
-                'error' => $e->getMessage(),
-            ]);
-            exit;
-        }
-    }
-
     public function processEntry(FreshRSS_Entry $entry, bool $force = false): FreshRSS_Entry
     {
         # Construct a unique identifier for the entry to identify processing of the same entry in the logs
@@ -202,18 +146,16 @@ class OllamaSummarizerExtension extends Minz_Extension
         $logger = new Logger($prefix);
 
         // Check if the feed is selected for processing
-        $config = $this->getConfiguration();
+        $config = self::getConfiguration();
         if (!$force && !$config->isFeedSelected($entry->feedId())) {
             $logger->debug('Feed not selected for processing, skipping');
 
             return $entry;
         }
 
-        if ($this->processor === null) {
-            $this->processor = $this->getProcessor($logger);
-        }
+        $processor = self::getProcessor($logger);
 
-        return $this->processor->processEntry($entry, $force);
+        return $processor->processEntry($entry, $force);
     }
 
     public function modifyEntryDisplay(FreshRSS_Entry $entry): FreshRSS_Entry
