@@ -61,17 +61,17 @@ if (!isset($this) || !($this instanceof OllamaSummarizerExtension)) {
     </div>
 
     <div class="form-group">
-        <label class="group-name" for="ollama_host"><?php echo _t('ext.ollama_summarizer.ollama_host'); ?></label>
+        <label class="group-name" for="ollama_url"><?php echo _t('ext.ollama_summarizer.ollama_url'); ?></label>
         <div class="group-controls">
-            <input type="text" name="ollama_host" id="ollama_host" value="<?php echo $config->getOllamaHost(); ?>" />
-            <p class="help"><?php echo _t('ext.ollama_summarizer.ollama_host_help'); ?></p>
+            <input type="text" name="ollama_url" id="ollama_url" value="<?php echo $config->getOllamaUrl(); ?>" />
+            <p class="help"><?php echo _t('ext.ollama_summarizer.ollama_url_help'); ?></p>
             <?php
             // Check Ollama connection
             $ollamaStatus = false;
             $ollamaError = '';
             $modelStatus = false;
             try {
-                $ch = curl_init("{$config->getOllamaHost()}/api/tags");
+                $ch = curl_init("{$config->getOllamaUrl()}/api/tags");
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_TIMEOUT, 5);
                 $response = curl_exec($ch);
@@ -158,6 +158,22 @@ if (!isset($this) || !($this instanceof OllamaSummarizerExtension)) {
         <div class="group-controls">
             <input type="number" name="context_length" id="context_length" min="1024" max="32768" value="<?php echo $config->getContextLength(); ?>" />
             <p class="help"><?php echo _t('ext.ollama_summarizer.context_length_help'); ?></p>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-name" for="max_retries"><?php echo _t('ext.ollama_summarizer.max_retries'); ?></label>
+        <div class="group-controls">
+            <input type="number" name="max_retries" id="max_retries" min="1" max="10" value="<?php echo $config->getMaxRetries(); ?>" />
+            <p class="help"><?php echo _t('ext.ollama_summarizer.max_retries_help'); ?></p>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-name" for="retry_delay_milliseconds"><?php echo _t('ext.ollama_summarizer.retry_delay_milliseconds'); ?></label>
+        <div class="group-controls">
+            <input type="number" name="retry_delay_milliseconds" id="retry_delay_milliseconds" min="100" max="60000" step="100" value="<?php echo $config->getRetryDelayMilliseconds(); ?>" />
+            <p class="help"><?php echo _t('ext.ollama_summarizer.retry_delay_milliseconds_help'); ?></p>
         </div>
     </div>
 

@@ -20,7 +20,7 @@ class OllamaClientImpl implements OllamaClient
 {
     private Logger $logger;
 
-    private string $ollamaHost;
+    private string $ollamaUrl;
 
     private string $ollamaModel;
 
@@ -32,7 +32,7 @@ class OllamaClientImpl implements OllamaClient
 
     /**
      * @param Logger              $logger
-     * @param string              $ollamaHost
+     * @param string              $ollamaUrl
      * @param string              $ollamaModel
      * @param array<string,mixed> $modelOptions      Additional options to pass to the Ollama model
      * @param int                 $promptLengthLimit
@@ -40,14 +40,14 @@ class OllamaClientImpl implements OllamaClient
      */
     public function __construct(
         Logger $logger,
-        string $ollamaHost,
+        string $ollamaUrl,
         string $ollamaModel,
         array $modelOptions,
         int $promptLengthLimit,
         string $promptTemplate
     ) {
         $this->logger = $logger;
-        $this->ollamaHost = rtrim($ollamaHost, '/');
+        $this->ollamaUrl = rtrim($ollamaUrl, '/');
         $this->ollamaModel = $ollamaModel;
         $this->modelOptions = $modelOptions;
         $this->promptLengthLimit = $promptLengthLimit;
@@ -113,7 +113,7 @@ class OllamaClientImpl implements OllamaClient
 
     private function callOllama(string $prompt, ?array $format = null): string
     {
-        $apiEndpoint = "{$this->ollamaHost}/api/generate";
+        $apiEndpoint = "{$this->ollamaUrl}/api/generate";
         $this->logger->debug("Sending request to Ollama at $apiEndpoint");
 
         // Ensure prompt is properly encoded

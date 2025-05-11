@@ -13,11 +13,9 @@ declare(strict_types=1);
 // https://freshrss.github.io/FreshRSS/en/developers/03_Backend/05_Extensions.html
 //
 // TODO:
-// - Consistent naming (primarily of config variables)
-// - Examples of using with docker (chrome + ollama + freshrss)
 // - Set up builds
-// - Handle situations when ollama is not available
 // - Handle ollama auth
+// - move retry settings to config
 //
 // nix-shell -p php83Packages.php-cs-fixer --pure --command 'php-cs-fixer fix extension.php'
 // nix-shell -p php83Packages.composer --pure --run 'composer install'
@@ -76,11 +74,13 @@ class OllamaSummarizerExtension extends Minz_Extension
         $webpageFetcher = new WebpageFetcher(
             $logger,
             $config->getChromeHost(),
-            $config->getChromePort()
+            $config->getChromePort(),
+            $config->getMaxRetries(),
+            $config->getRetryDelayMilliseconds()
         );
         $ollamaClient = new OllamaClientImpl(
             $logger,
-            $config->getOllamaHost(),
+            $config->getOllamaUrl(),
             $config->getOllamaModel(),
             $config->getModelOptions(),
             $config->getContextLength(),
@@ -113,13 +113,15 @@ class OllamaSummarizerExtension extends Minz_Extension
                 $config = new Configuration(
                     chromeHost: Minz_Request::paramString('chrome_host'),
                     chromePort: Minz_Request::paramInt('chrome_port'),
-                    ollamaHost: rtrim(Minz_Request::paramString('ollama_host'), '/'),
+                    ollamaUrl: rtrim(Minz_Request::paramString('ollama_url'), '/'),
                     ollamaModel: Minz_Request::paramString('ollama_model'),
                     modelOptions: $modelOptionsValidated,
                     promptLengthLimit: Minz_Request::paramInt('prompt_length_limit'),
                     contextLength: Minz_Request::paramInt('context_length'),
                     promptTemplate: Minz_Request::paramString('prompt_template'),
                     selectedFeeds: $selectedFeeds,
+                    maxRetries: Minz_Request::paramInt('max_retries'),
+                    retryDelayMilliseconds: Minz_Request::paramInt('retry_delay_milliseconds'),
                 );
 
                 $userConf = FreshRSS_Context::$user_conf;
@@ -179,7 +181,9 @@ class OllamaSummarizerExtension extends Minz_Extension
             $fetcher = new WebpageFetcher(
                 $logger,
                 $config->getChromeHost(),
-                $config->getChromePort()
+                $config->getChromePort(),
+                $config->getMaxRetries(),
+                $config->getRetryDelayMilliseconds()
             );
 
             $content = $fetcher->fetchContent($url, 'article');
@@ -243,23 +247,9 @@ class OllamaSummarizerExtension extends Minz_Extension
 
         // Add summary and debug info if they exist
         $summary = $entry->attributeString('ai-summary');
-        $debugInfo = $entry->attributeString('ai-debug');
 
         if (!empty($summary)) {
-            $content .= '<hr/><div class="ai-summary"><strong>Summary:</strong> ' . htmlspecialchars($summary) . '</div><hr>';
-        }
-
-        if (!empty($debugInfo)) {
-            $debugArray = json_decode($debugInfo, true);
-            if ($debugArray !== null) {
-                $content .= '<details class="ai-debug"><summary>Debug Information: Original Content</summary><pre>' . htmlspecialchars($debugArray['content'] ?? '') . '</pre></details>';
-
-                $ollamaResponse = $debugArray['ollamaResponse'] ?? '';
-                if (is_array($ollamaResponse)) {
-                    $ollamaResponse = json_encode($ollamaResponse, JSON_PRETTY_PRINT);
-                }
-                $content .= '<details class="ai-debug"><summary>Debug Information: Ollama Response</summary><pre>' . htmlspecialchars($ollamaResponse) . '</pre></details>';
-            }
+            $content .= '<hr/><div class="ai-summary"><strong>AI Generated Summary:</strong> ' . htmlspecialchars($summary) . '</div>';
         }
 
         $entry->_content($content);

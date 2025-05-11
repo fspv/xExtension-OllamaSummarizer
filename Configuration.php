@@ -9,26 +9,30 @@ declare(strict_types=1);
 class Configuration
 {
     /**
-     * @param string               $chromeHost        Hostname where Chrome is running with remote debugging enabled
-     * @param int                  $chromePort        Debug port for Chrome
-     * @param string               $ollamaHost        URL of the Ollama API endpoint
-     * @param string               $ollamaModel       The model name to use for summarization
-     * @param array<string, mixed> $modelOptions      Additional options for the Ollama model
-     * @param int                  $promptLengthLimit Maximum length of the prompt in characters
-     * @param int                  $contextLength     Context length for the model in tokens
-     * @param string               $promptTemplate    Template for the prompt sent to Ollama
-     * @param array<int>           $selectedFeeds     Array of feed IDs that should be processed
+     * @param string               $chromeHost             Hostname where Chrome is running with remote debugging enabled
+     * @param int                  $chromePort             Debug port for Chrome
+     * @param string               $ollamaUrl              URL of the Ollama API endpoint
+     * @param string               $ollamaModel            The model name to use for summarization
+     * @param array<string, mixed> $modelOptions           Additional options for the Ollama model
+     * @param int                  $promptLengthLimit      Maximum length of the prompt in characters
+     * @param int                  $contextLength          Context length for the model in tokens
+     * @param string               $promptTemplate         Template for the prompt sent to Ollama
+     * @param array<int>           $selectedFeeds          Array of feed IDs that should be processed
+     * @param int                  $maxRetries             Maximum number of retry attempts for failed operations
+     * @param int                  $retryDelayMilliseconds Delay between retry attempts in milliseconds
      */
     public function __construct(
         private readonly string $chromeHost,
         private readonly int $chromePort,
-        private readonly string $ollamaHost,
+        private readonly string $ollamaUrl,
         private readonly string $ollamaModel,
         private readonly array $modelOptions,
         private readonly int $promptLengthLimit,
         private readonly int $contextLength,
         private readonly string $promptTemplate,
         private readonly array $selectedFeeds = [],
+        private readonly int $maxRetries = 3,
+        private readonly int $retryDelayMilliseconds = 2000,
     ) {
         $this->validate();
     }
@@ -41,7 +45,7 @@ class Configuration
         return new self(
             chromeHost: 'localhost',
             chromePort: 9222,
-            ollamaHost: 'http://localhost:11434',
+            ollamaUrl: 'http://localhost:11434',
             ollamaModel: 'llama3',
             modelOptions: [],
             promptLengthLimit: 8192,
@@ -54,6 +58,8 @@ Based on the following article content, please provide:
 Article content:
 EOT,
             selectedFeeds: [],
+            maxRetries: 3,
+            retryDelayMilliseconds: 2000,
         );
     }
 
@@ -72,13 +78,15 @@ EOT,
         $config = new self(
             chromeHost: $userConfig->attributeString('ollama_summarizer_chrome_host') ?? $defaults->getChromeHost(),
             chromePort: $userConfig->attributeInt('ollama_summarizer_chrome_port') ?? $defaults->getChromePort(),
-            ollamaHost: $userConfig->attributeString('ollama_summarizer_ollama_host') ?? $defaults->getOllamaHost(),
+            ollamaUrl: $userConfig->attributeString('ollama_summarizer_ollama_url') ?? $defaults->getOllamaUrl(),
             ollamaModel: $userConfig->attributeString('ollama_summarizer_ollama_model') ?? $defaults->getOllamaModel(),
             modelOptions: $modelOptionsValidated,
             promptLengthLimit: $userConfig->attributeInt('ollama_summarizer_prompt_length_limit') ?? $defaults->getPromptLengthLimit(),
             contextLength: $userConfig->attributeInt('ollama_summarizer_context_length') ?? $defaults->getContextLength(),
             promptTemplate: $userConfig->attributeString('ollama_summarizer_prompt_template') ?? $defaults->getPromptTemplate(),
             selectedFeeds: $userConfig->attributeArray('ollama_summarizer_selected_feeds') ?? $defaults->getSelectedFeeds(),
+            maxRetries: $userConfig->attributeInt('ollama_summarizer_max_retries') ?? $defaults->getMaxRetries(),
+            retryDelayMilliseconds: $userConfig->attributeInt('ollama_summarizer_retry_delay_milliseconds') ?? $defaults->getRetryDelayMilliseconds(),
         );
         $config->validate();
 
@@ -95,13 +103,15 @@ EOT,
         return [
             'ollama_summarizer_chrome_host' => $this->chromeHost,
             'ollama_summarizer_chrome_port' => $this->chromePort,
-            'ollama_summarizer_ollama_host' => $this->ollamaHost,
+            'ollama_summarizer_ollama_url' => $this->ollamaUrl,
             'ollama_summarizer_ollama_model' => $this->ollamaModel,
             'ollama_summarizer_model_options' => $this->modelOptions,
             'ollama_summarizer_prompt_length_limit' => $this->promptLengthLimit,
             'ollama_summarizer_context_length' => $this->contextLength,
             'ollama_summarizer_prompt_template' => $this->promptTemplate,
             'ollama_summarizer_selected_feeds' => $this->selectedFeeds,
+            'ollama_summarizer_max_retries' => $this->maxRetries,
+            'ollama_summarizer_retry_delay_milliseconds' => $this->retryDelayMilliseconds,
         ];
     }
 
@@ -116,8 +126,8 @@ EOT,
             throw new InvalidArgumentException('Chrome port must be between 1 and 65535');
         }
 
-        if (!filter_var($this->ollamaHost, FILTER_VALIDATE_URL)) {
-            throw new InvalidArgumentException('Invalid Ollama host URL');
+        if (!filter_var($this->ollamaUrl, FILTER_VALIDATE_URL)) {
+            throw new InvalidArgumentException('Invalid Ollama URL');
         }
 
         if ($this->promptLengthLimit < 1024 || $this->promptLengthLimit > 32768) {
@@ -130,6 +140,14 @@ EOT,
 
         if (empty($this->promptTemplate)) {
             throw new InvalidArgumentException('Prompt template cannot be empty');
+        }
+
+        if ($this->maxRetries < 1 || $this->maxRetries > 10) {
+            throw new InvalidArgumentException('Max retries must be between 1 and 10');
+        }
+
+        if ($this->retryDelayMilliseconds < 100 || $this->retryDelayMilliseconds > 60000) {
+            throw new InvalidArgumentException('Retry delay must be between 100 and 60000 milliseconds');
         }
 
         foreach ($this->modelOptions as $key => $value) {
@@ -149,9 +167,9 @@ EOT,
         return $this->chromePort;
     }
 
-    public function getOllamaHost(): string
+    public function getOllamaUrl(): string
     {
-        return $this->ollamaHost;
+        return $this->ollamaUrl;
     }
 
     public function getOllamaModel(): string
@@ -196,5 +214,15 @@ EOT,
     public function isFeedSelected(int $feedId): bool
     {
         return in_array($feedId, $this->selectedFeeds, true);
+    }
+
+    public function getMaxRetries(): int
+    {
+        return $this->maxRetries;
+    }
+
+    public function getRetryDelayMilliseconds(): int
+    {
+        return $this->retryDelayMilliseconds;
     }
 }

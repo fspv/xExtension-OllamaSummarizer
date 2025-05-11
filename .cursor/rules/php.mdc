@@ -11,6 +11,6 @@ alwaysApply: true
 - Provide complete documentation for classes, methods, and properties
 - Document parameters with correct types and descriptions
 - Include `@return`, `@throws`, and `@deprecated` tags as needed
-- Everything should be thorougly logged with the debug log level with all the detail to debug the potential problem included in the log line
+- Everything should be thoroughly logged with the debug log level with all the detail to debug the potential problem included in the log line
 - Favor functional paradigms over object-oriented ones, favor composition over inheritance
 - Follow PCR-12 coding standards

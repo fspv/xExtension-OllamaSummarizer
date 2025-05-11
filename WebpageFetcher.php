@@ -20,15 +20,17 @@ class WebpageFetcher
 
     private int $devtoolsPort;
 
-    private const MAX_RETRIES = 3;
+    private int $maxRetries;
 
-    private const RETRY_DELAY_SECONDS = 2;
+    private int $retryDelayMilliseconds;
 
-    public function __construct(Logger $logger, string $devtoolsHost = 'localhost', int $devtoolsPort = 9222)
+    public function __construct(Logger $logger, string $devtoolsHost, int $devtoolsPort, int $maxRetries, int $retryDelayMilliseconds)
     {
         $this->logger = $logger;
         $this->devtoolsHost = $devtoolsHost;
         $this->devtoolsPort = $devtoolsPort;
+        $this->maxRetries = $maxRetries;
+        $this->retryDelayMilliseconds = $retryDelayMilliseconds;
     }
 
     public function fetchContent(string $url, string $path): string
@@ -37,18 +39,18 @@ class WebpageFetcher
         /** @var Exception */
         $lastException = null;
 
-        while ($attempt <= self::MAX_RETRIES) {
+        while ($attempt <= $this->maxRetries) {
             try {
-                $this->logger->debug("Fetch attempt {$attempt} of " . self::MAX_RETRIES . " for URL: {$url}");
+                $this->logger->debug("Fetch attempt {$attempt} of " . $this->maxRetries . " for URL: {$url}");
 
                 return $this->attemptFetch($url, $path);
             } catch (Exception $e) {
                 $lastException = $e;
                 $this->logger->warning("Fetch attempt {$attempt} failed: " . $e->getMessage());
 
-                if ($attempt < self::MAX_RETRIES) {
-                    $this->logger->debug('Waiting ' . self::RETRY_DELAY_SECONDS . ' seconds before next attempt');
-                    sleep(self::RETRY_DELAY_SECONDS);
+                if ($attempt < $this->maxRetries) {
+                    $this->logger->debug('Waiting ' . $this->retryDelayMilliseconds . ' milliseconds before next attempt');
+                    usleep($this->retryDelayMilliseconds * 1000);
                 }
                 $attempt++;
             }

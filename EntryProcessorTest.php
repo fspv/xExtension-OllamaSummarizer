@@ -29,7 +29,7 @@ class EntryProcessorTest extends TestCase
     {
         $this->logger = new Logger('test');
         $this->ollamaClient = new TestOllamaClient($this->logger);
-        $this->webpageFetcher = new TestWebpageFetcher($this->logger);
+        $this->webpageFetcher = new TestWebpageFetcher($this->logger, 'localhost', 9222, 3, 100);
 
         // Set up mock user configuration
         $userConf = new class () {
@@ -42,10 +42,10 @@ class EntryProcessorTest extends TestCase
         };
         $tempFile = tempnam(sys_get_temp_dir(), 'freshrss_test_');
         file_put_contents($tempFile, '<?php return [
-            "ollama_summarizer_chrome_host" => "custom-host",
-            "ollama_summarizer_chrome_port" => 9999,
-            "ollama_summarizer_ollama_host" => "http://custom-ollama:11434",
-            "ollama_summarizer_ollama_model" => "mistral",
+            "ollama_summarizer_chrome_host" => "custom-chrome",
+            "ollama_summarizer_chrome_port" => 9223,
+            "ollama_summarizer_ollama_url" => "http://custom-ollama:11434",
+            "ollama_summarizer_ollama_model" => "custom-model",
             "ollama_summarizer_model_options" => ["temperature" => 0.7],
             "ollama_summarizer_prompt_length_limit" => 4000,
             "ollama_summarizer_context_length" => 2048,
@@ -206,31 +206,6 @@ class EntryProcessorTest extends TestCase
         $this->assertTrue($processedEntry->hasAttribute('ai-processed'));
         $this->assertFalse($processedEntry->hasAttribute('ai-summary'));
         $this->assertEquals([], $processedEntry->attributeArray('ai-tags'));
-    }
-
-    public function testProcessEntryWithDebugInformation(): void
-    {
-        // Create a test entry
-        $entry = $this->createTestEntry('https://example.com/article', 'Test Article');
-
-        // Set up test responses
-        $this->webpageFetcher->setResponse('This is the full article content');
-        $this->ollamaClient->setResponse([
-            'summary' => 'This is a summary of the article',
-            'tags' => ['test', 'article'],
-        ]);
-
-        // Process the entry
-        $processedEntry = $this->processor->processEntry($entry);
-
-        // Verify debug information
-        $this->assertTrue($processedEntry->hasAttribute('ai-debug'));
-        $debugInfoStr = $processedEntry->attributeString('ai-debug');
-        $this->assertNotNull($debugInfoStr);
-        $debugInfo = json_decode($debugInfoStr, true);
-        $this->assertIsArray($debugInfo);
-        $this->assertArrayHasKey('content', $debugInfo);
-        $this->assertArrayHasKey('ollamaResponse', $debugInfo);
     }
 
     public function testTagNormalization(): void

@@ -103,12 +103,6 @@ class EntryProcessor
 
             $entry->_attribute('ai-processed', true);
 
-            $debugInfo = [
-                'content' => $content,
-                'ollamaResponse' => $result ?? null,
-            ];
-            $entry->_attribute('ai-debug', json_encode($debugInfo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-
             $this->logger->debug('Finished processing entry ' . json_encode($entry->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
             return $entry;
