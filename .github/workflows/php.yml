@@ -22,7 +22,13 @@ jobs:
           
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist --optimize-autoloader
-        
+
+      - name: Clone FreshRSS
+        run: git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
+
+      - name: Dump autoload
+        run: composer dump-autoload
+
       - name: Run PHP-CS-Fixer
         run: vendor/bin/php-cs-fixer fix --dry-run --diff --using-cache=no --verbose
 
@@ -41,6 +47,12 @@ jobs:
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist --optimize-autoloader
         
+      - name: Clone FreshRSS
+        run: git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
+
+      - name: Dump autoload
+        run: composer dump-autoload
+
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse --level=max
 
@@ -59,5 +71,11 @@ jobs:
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist --optimize-autoloader
         
+      - name: Clone FreshRSS
+        run: git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
+
+      - name: Dump autoload
+        run: composer dump-autoload
+
       - name: Run Psalm
         run: vendor/bin/psalm --no-cache 
