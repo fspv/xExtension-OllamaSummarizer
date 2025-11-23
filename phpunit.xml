@@ -31,4 +31,13 @@
     </testsuites>
     <coverage>
     </coverage>
+    <source>
+        <include>
+            <directory>.</directory>
+        </include>
+        <exclude>
+            <directory>vendor</directory>
+            <directory>.phpunit.cache</directory>
+        </exclude>
+    </source>
 </phpunit> 

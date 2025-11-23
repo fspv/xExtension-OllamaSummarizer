@@ -14,6 +14,7 @@ require_once dirname(__FILE__) . '/TestOllamaClient.php';
 require_once dirname(__FILE__) . '/TestFreshRSSEntry.php';
 require_once dirname(__FILE__) . '/EntryProcessor.php';
 require_once dirname(__FILE__) . '/EntryInterface.php';
+require_once dirname(__FILE__) . '/NullLockManager.php';
 
 class EntryProcessorTest extends TestCase
 {
@@ -25,11 +26,14 @@ class EntryProcessorTest extends TestCase
 
     private Logger $logger;
 
+    private NullLockManager $lockManager;
+
     protected function setUp(): void
     {
         $this->logger = new Logger('test');
         $this->ollamaClient = new TestOllamaClient($this->logger);
         $this->webpageFetcher = new TestWebpageFetcher($this->logger, 'localhost', 9222, 3, 100);
+        $this->lockManager = new NullLockManager();
 
         // Set up mock user configuration
         $userConf = new class () {
@@ -60,7 +64,8 @@ class EntryProcessorTest extends TestCase
         $this->processor = new EntryProcessor(
             $this->logger,
             $this->webpageFetcher,
-            $this->ollamaClient
+            $this->ollamaClient,
+            $this->lockManager
         );
     }
 

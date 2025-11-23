@@ -6,6 +6,7 @@ require_once dirname(__FILE__) . '/constants.php';
 require_once dirname(__FILE__) . '/Logger.php';
 require_once dirname(__FILE__) . '/WebpageFetcher.php';
 require_once dirname(__FILE__) . '/OllamaClient.php';
+require_once dirname(__FILE__) . '/LockManager.php';
 
 class EntryProcessor
 {
@@ -15,20 +16,43 @@ class EntryProcessor
 
     private OllamaClient $ollamaClient;
 
+    private LockManager $lockManager;
+
     public function __construct(
         Logger $logger,
         WebpageFetcher $webpageFetcher,
-        OllamaClient $ollamaClient
+        OllamaClient $ollamaClient,
+        LockManager $lockManager
     ) {
         $this->logger = $logger;
         $this->webpageFetcher = $webpageFetcher;
         $this->ollamaClient = $ollamaClient;
+        $this->lockManager = $lockManager;
     }
 
     public function processEntry(FreshRSS_Entry $entry, bool $force = false): FreshRSS_Entry
     {
         $this->logger->debug('Processing entry: ' . json_encode($entry->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
+        // Try to acquire the lock
+        $entryId = $entry->guid();
+        if (!$this->lockManager->acquireLock($entryId)) {
+            $this->logger->warning('Another process is currently processing articles. Skipping entry: ' . $entryId);
+
+            // Return the entry unchanged when we can't get the lock
+            return $entry;
+        }
+
+        try {
+            return $this->processEntryWithLock($entry, $force);
+        } finally {
+            // Always release the lock, even if an exception occurs
+            $this->lockManager->releaseLock();
+        }
+    }
+
+    private function processEntryWithLock(FreshRSS_Entry $entry, bool $force): FreshRSS_Entry
+    {
         if (!$force && $entry->hasAttribute('ai-processed')) {
             $this->logger->debug('Entry already processed, restoring tags from attributes');
 
@@ -69,8 +93,8 @@ class EntryProcessor
                 throw new Exception('Feed is null for entry');
             }
             $response = $this->webpageFetcher->fetchContent($url, $feed->pathEntries() ?: 'article');
-            $content = $response['text'] ?? '';
-            $html = $response['html'] ?? '';
+            $content = $response['text'];
+            $html = $response['html'];
 
             $entry->_attribute('ollama-summarizer-html', $html);
 

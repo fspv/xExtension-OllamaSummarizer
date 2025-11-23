@@ -1,10 +1,10 @@
 <?php
 
-function mySanitizeHTML(FreshRSS_Feed $feed, string $url, string $html): string {
+function mySanitizeHTML(FreshRSS_Feed $feed, string $url, string $html): string
+{
     if (strlen($html) == 0) {
         return '';
     }
-
 
     $doc = new DOMDocument();
     $doc->loadHTML($html, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);

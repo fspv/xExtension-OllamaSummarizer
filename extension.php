@@ -24,6 +24,9 @@ require_once dirname(__FILE__) . '/OllamaClient.php';
 require_once dirname(__FILE__) . '/EntryProcessor.php';
 require_once dirname(__FILE__) . '/Configuration.php';
 require_once dirname(__FILE__) . '/SanitizeHTML.php';
+require_once dirname(__FILE__) . '/LockManager.php';
+require_once dirname(__FILE__) . '/FileLockManager.php';
+require_once dirname(__FILE__) . '/NullLockManager.php';
 
 class OllamaSummarizerExtension extends Minz_Extension
 {
@@ -49,7 +52,7 @@ class OllamaSummarizerExtension extends Minz_Extension
         return Configuration::fromUserConfiguration($userConf);
     }
 
-    private static function getProcessor(Logger $logger): EntryProcessor
+    private static function getProcessor(Logger $logger, LockManager $lockManager): EntryProcessor
     {
         $config = self::getConfiguration();
         $webpageFetcher = new WebpageFetcher(
@@ -69,7 +72,7 @@ class OllamaSummarizerExtension extends Minz_Extension
             $config->getOllamaTimeoutSeconds()
         );
 
-        return new EntryProcessor($logger, $webpageFetcher, $ollamaClient);
+        return new EntryProcessor($logger, $webpageFetcher, $ollamaClient, $lockManager);
     }
 
     public function handleConfigureAction(): void
@@ -156,7 +159,8 @@ class OllamaSummarizerExtension extends Minz_Extension
             return $entry;
         }
 
-        $processor = self::getProcessor($logger);
+        $lockManager = new FileLockManager($logger);
+        $processor = self::getProcessor($logger, $lockManager);
 
         return $processor->processEntry($entry, $force);
     }
