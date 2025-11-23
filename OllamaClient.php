@@ -30,6 +30,8 @@ class OllamaClientImpl implements OllamaClient
 
     private string $promptTemplate;
 
+    private int $timeoutSeconds;
+
     /**
      * @param Logger              $logger
      * @param string              $ollamaUrl
@@ -37,6 +39,7 @@ class OllamaClientImpl implements OllamaClient
      * @param array<string,mixed> $modelOptions      Additional options to pass to the Ollama model
      * @param int                 $promptLengthLimit
      * @param string              $promptTemplate    The template for the prompt with placeholders: {summary_length}, {num_tags}, {content}
+     * @param int                 $timeoutSeconds    Timeout for Ollama API calls in seconds
      */
     public function __construct(
         Logger $logger,
@@ -44,7 +47,8 @@ class OllamaClientImpl implements OllamaClient
         string $ollamaModel,
         array $modelOptions,
         int $promptLengthLimit,
-        string $promptTemplate
+        string $promptTemplate,
+        int $timeoutSeconds = 600
     ) {
         $this->logger = $logger;
         $this->ollamaUrl = rtrim($ollamaUrl, '/');
@@ -52,6 +56,7 @@ class OllamaClientImpl implements OllamaClient
         $this->modelOptions = $modelOptions;
         $this->promptLengthLimit = $promptLengthLimit;
         $this->promptTemplate = $promptTemplate;
+        $this->timeoutSeconds = $timeoutSeconds;
     }
 
     public function generateSummary(string $content): array
@@ -148,7 +153,7 @@ class OllamaClientImpl implements OllamaClient
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 600);
+            curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeoutSeconds);
 
             $verbose = fopen('php://temp', 'w+');
             curl_setopt($ch, CURLOPT_VERBOSE, true);

@@ -20,6 +20,7 @@ class Configuration
      * @param array<int>           $selectedFeeds          Array of feed IDs that should be processed
      * @param int                  $maxRetries             Maximum number of retry attempts for failed operations
      * @param int                  $retryDelayMilliseconds Delay between retry attempts in milliseconds
+     * @param int                  $ollamaTimeoutSeconds   Timeout for Ollama API calls in seconds
      */
     public function __construct(
         private readonly string $chromeHost,
@@ -33,6 +34,7 @@ class Configuration
         private readonly array $selectedFeeds = [],
         private readonly int $maxRetries = 3,
         private readonly int $retryDelayMilliseconds = 2000,
+        private readonly int $ollamaTimeoutSeconds = 600,
     ) {
         $this->validate();
     }
@@ -60,6 +62,7 @@ EOT,
             selectedFeeds: [],
             maxRetries: 3,
             retryDelayMilliseconds: 2000,
+            ollamaTimeoutSeconds: 600,
         );
     }
 
@@ -87,6 +90,7 @@ EOT,
             selectedFeeds: $userConfig->attributeArray('ollama_summarizer_selected_feeds') ?? $defaults->getSelectedFeeds(),
             maxRetries: $userConfig->attributeInt('ollama_summarizer_max_retries') ?? $defaults->getMaxRetries(),
             retryDelayMilliseconds: $userConfig->attributeInt('ollama_summarizer_retry_delay_milliseconds') ?? $defaults->getRetryDelayMilliseconds(),
+            ollamaTimeoutSeconds: $userConfig->attributeInt('ollama_summarizer_ollama_timeout_seconds') ?? $defaults->getOllamaTimeoutSeconds(),
         );
         $config->validate();
 
@@ -112,6 +116,7 @@ EOT,
             'ollama_summarizer_selected_feeds' => $this->selectedFeeds,
             'ollama_summarizer_max_retries' => $this->maxRetries,
             'ollama_summarizer_retry_delay_milliseconds' => $this->retryDelayMilliseconds,
+            'ollama_summarizer_ollama_timeout_seconds' => $this->ollamaTimeoutSeconds,
         ];
     }
 
@@ -148,6 +153,10 @@ EOT,
 
         if ($this->retryDelayMilliseconds < 100 || $this->retryDelayMilliseconds > 60000) {
             throw new InvalidArgumentException('Retry delay must be between 100 and 60000 milliseconds');
+        }
+
+        if ($this->ollamaTimeoutSeconds < 10 || $this->ollamaTimeoutSeconds > 3600) {
+            throw new InvalidArgumentException('Ollama timeout must be between 10 and 3600 seconds');
         }
 
         foreach ($this->modelOptions as $key => $value) {
@@ -224,5 +233,10 @@ EOT,
     public function getRetryDelayMilliseconds(): int
     {
         return $this->retryDelayMilliseconds;
+    }
+
+    public function getOllamaTimeoutSeconds(): int
+    {
+        return $this->ollamaTimeoutSeconds;
     }
 }

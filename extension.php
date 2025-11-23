@@ -65,7 +65,8 @@ class OllamaSummarizerExtension extends Minz_Extension
             $config->getOllamaModel(),
             $config->getModelOptions(),
             $config->getContextLength(),
-            $config->getPromptTemplate()
+            $config->getPromptTemplate(),
+            $config->getOllamaTimeoutSeconds()
         );
 
         return new EntryProcessor($logger, $webpageFetcher, $ollamaClient);
@@ -103,6 +104,7 @@ class OllamaSummarizerExtension extends Minz_Extension
                     selectedFeeds: $selectedFeeds,
                     maxRetries: Minz_Request::paramInt('max_retries'),
                     retryDelayMilliseconds: Minz_Request::paramInt('retry_delay_milliseconds'),
+                    ollamaTimeoutSeconds: Minz_Request::paramInt('ollama_timeout_seconds'),
                 );
 
                 $userConf = FreshRSS_Context::$user_conf;

@@ -39,7 +39,7 @@ class TestWebpageFetcher extends WebpageFetcher
         return ['wsUrl' => 'ws://test', 'targetId' => 'test-id'];
     }
 
-    protected function attemptFetch(string $url, string $path): string
+    protected function attemptFetch(string $url, string $path): array
     {
         $this->attempts++;
         if ($this->attempts <= $this->failuresBeforeSuccess) {
@@ -49,7 +49,7 @@ class TestWebpageFetcher extends WebpageFetcher
             throw new RuntimeException('Test response not set. Call setResponse() first.');
         }
 
-        return $this->response;
+        return ['text' => $this->response, 'html' => $this->response];
     }
 
     public function getAttempts(): int

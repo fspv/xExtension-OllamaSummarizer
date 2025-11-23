@@ -162,6 +162,14 @@ if (!isset($this) || !($this instanceof OllamaSummarizerExtension)) {
     </div>
 
     <div class="form-group">
+        <label class="group-name" for="ollama_timeout_seconds"><?php echo _t('ext.ollama_summarizer.ollama_timeout_seconds'); ?></label>
+        <div class="group-controls">
+            <input type="number" name="ollama_timeout_seconds" id="ollama_timeout_seconds" min="10" max="3600" value="<?php echo $config->getOllamaTimeoutSeconds(); ?>" />
+            <p class="help"><?php echo _t('ext.ollama_summarizer.ollama_timeout_seconds_help'); ?></p>
+        </div>
+    </div>
+
+    <div class="form-group">
         <label class="group-name" for="max_retries"><?php echo _t('ext.ollama_summarizer.max_retries'); ?></label>
         <div class="group-controls">
             <input type="number" name="max_retries" id="max_retries" min="1" max="10" value="<?php echo $config->getMaxRetries(); ?>" />

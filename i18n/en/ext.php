@@ -18,6 +18,8 @@ return [
         'prompt_length_limit_help' => 'Maximum length of the prompt in characters',
         'context_length' => 'Ollama Context Length',
         'context_length_help' => 'Context length for the model in tokens',
+        'ollama_timeout_seconds' => 'Ollama Timeout',
+        'ollama_timeout_seconds_help' => 'Timeout for Ollama API calls in seconds (10-3600)',
         'selected_feeds' => 'Selected Feeds',
         'selected_feeds_help' => 'Feeds that should be processed',
         'max_retries' => 'Article Fetch Max Retries',
