@@ -33,7 +33,17 @@ class WebpageFetcher
         $this->retryDelayMilliseconds = $retryDelayMilliseconds;
     }
 
-    public function fetchContent(string $url, string $path): string
+    /**
+     * Fetches both inner text and HTML content from a webpage element.
+     *
+     * @param string $url  The URL to fetch content from
+     * @param string $path The CSS selector path to find the element
+     *
+     * @throws Exception If fetching fails after all retry attempts
+     *
+     * @return array{text: string, html: string} Array containing both inner text and HTML content
+     */
+    public function fetchContent(string $url, string $path): array
     {
         $attempt = 1;
         /** @var Exception */
@@ -61,7 +71,17 @@ class WebpageFetcher
         throw $lastException;
     }
 
-    protected function attemptFetch(string $url, string $path): string
+    /**
+     * Attempts to fetch content from a webpage.
+     *
+     * @param string $url  The URL to fetch content from
+     * @param string $path The CSS selector path to find the element
+     *
+     * @throws Exception If fetching fails
+     *
+     * @return array{text: string, html: string} Array containing both inner text and HTML content
+     */
+    protected function attemptFetch(string $url, string $path): array
     {
         $this->logger->debug('Fetching ' . $url . ' with path selector ' . $path);
         $this->logger->debug('Connecting to Chrome DevTools via WebSocket');
@@ -127,23 +147,29 @@ class WebpageFetcher
             // Wait a bit for JavaScript to execute (adjust as needed)
             sleep(10);
 
-            // First try to find and get content from article tag
-            $articleEvalMessage = json_encode([
+            // Get both innerText and outerHTML
+            $evalMessage = json_encode([
                 'id' => 2,
                 'method' => 'Runtime.evaluate',
                 'params' => [
-                    'expression' => 'document.querySelector("' . $path . '")?.innerText || document.body.innerText',
+                    'expression' => '(() => {
+                        const element = document.querySelector("' . $path . '") || document.body;
+                        return {
+                            text: element.innerText,
+                            html: element.outerHTML
+                        };
+                    })()',
                     'returnByValue' => true,
                 ],
             ]);
-            if ($articleEvalMessage === false) {
-                throw new Exception('Failed to encode article evaluation message');
+            if ($evalMessage === false) {
+                throw new Exception('Failed to encode evaluation message');
             }
-            $this->logger->debug('Sending article evaluation command: ' . $articleEvalMessage);
-            $client->send($articleEvalMessage);
+            $this->logger->debug('Sending evaluation command: ' . $evalMessage);
+            $client->send($evalMessage);
 
             // Get the evaluation result
-            $content = '';
+            $content = ['text' => '', 'html' => ''];
             $evalComplete = false;
             while (!$evalComplete) {
                 $response = $client->receive();
@@ -152,7 +178,9 @@ class WebpageFetcher
 
                 if (isset($data['id']) && $data['id'] === 2) {
                     if (isset($data['result']['result']['value'])) {
-                        $content = $data['result']['result']['value'];
+                        $value = $data['result']['result']['value'];
+                        $content['text'] = $value['text'] ?? '';
+                        $content['html'] = $value['html'] ?? '';
                     }
                     $evalComplete = true;
                 }

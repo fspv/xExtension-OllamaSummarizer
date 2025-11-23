@@ -68,8 +68,11 @@ class EntryProcessor
             if ($feed === null) {
                 throw new Exception('Feed is null for entry');
             }
-            $content = $this->webpageFetcher->fetchContent($url, $feed->pathEntries() ?: 'article');
-            $ollamaResponse = '';
+            $response = $this->webpageFetcher->fetchContent($url, $feed->pathEntries() ?: 'article');
+            $content = $response['text'] ?? '';
+            $html = $response['html'] ?? '';
+
+            $entry->_attribute('ollama-summarizer-html', $html);
 
             if (!empty($content)) {
                 $this->logger->debug('Content fetched successfully, length: ' . strlen($content));

@@ -23,6 +23,7 @@ require_once dirname(__FILE__) . '/WebpageFetcher.php';
 require_once dirname(__FILE__) . '/OllamaClient.php';
 require_once dirname(__FILE__) . '/EntryProcessor.php';
 require_once dirname(__FILE__) . '/Configuration.php';
+require_once dirname(__FILE__) . '/SanitizeHTML.php';
 
 class OllamaSummarizerExtension extends Minz_Extension
 {
@@ -179,6 +180,16 @@ class OllamaSummarizerExtension extends Minz_Extension
 
         if (!empty($summary)) {
             $content .= '<hr/><div class="ai-summary"><strong>AI Generated Summary:</strong> ' . htmlspecialchars($summary) . '</div>';
+        }
+
+        // Add article HTML under the details tag if it exists
+        $html = $entry->attributeString('ollama-summarizer-html');
+        if (!empty($html)) {
+            $feed = $entry->feed();
+            if ($feed === null) {
+                throw new Exception('Feed is null for entry');
+            }
+            $content .= '<hr/><details><summary>Article HTML</summary>' . mySanitizeHTML($feed, $entry->link(), $html) . '</details>';
         }
 
         $entry->_content($content);

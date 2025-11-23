@@ -8,14 +8,17 @@ services:
         RUN apt-get upgrade -y
         RUN apt-get install -y composer
         RUN composer require textalk/websocket
-        ADD . /var/www/FreshRSS/extensions/xExtension-OllamaSummarizer
-        RUN rm -rf /var/www/FreshRSS/extensions/xExtension-OllamaSummarizer/vendor
-        RUN chown -R www-data:www-data /var/www/FreshRSS/extensions/xExtension-OllamaSummarizer
+        # ADD . /var/www/FreshRSS/extensions/xExtension-OllamaSummarizer
+        # RUN rm -rf /var/www/FreshRSS/extensions/xExtension-OllamaSummarizer/vendor
+        # RUN chown -R www-data:www-data /var/www/FreshRSS/extensions/xExtension-OllamaSummarizer
     restart: unless-stopped
     environment:
       CRON_MIN: '2,32'
       FRESHRSS_ENV: development
       LISTEN: 0.0.0.0:80
+    # Uncomment to use a local copy of the extension
+    volumes:
+      - ./:/var/www/FreshRSS/extensions/xExtension-OllamaSummarizer
     depends_on:
       - freshrss-chrome
       - freshrss-ollama
