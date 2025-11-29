@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/Configuration.php';
 $defaults = Configuration::createDefault();
-if (FreshRSS_Context::$user_conf) {
-    $config = Configuration::fromUserConfiguration(FreshRSS_Context::$user_conf);
+if (FreshRSS_Context::hasUserConf()) {
+    $config = Configuration::fromUserConfiguration(FreshRSS_Context::userConf());
 } else {
     $config = $defaults;
 }

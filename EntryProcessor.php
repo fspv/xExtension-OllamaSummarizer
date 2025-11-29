@@ -106,11 +106,6 @@ final class EntryProcessor
 
                 // Generate tags and summary using Ollama
                 $this->logger->debug('Sending content to Ollama');
-                /** @psalm-suppress DeprecatedProperty */
-                $userConf = FreshRSS_Context::$user_conf;
-                if ($userConf === null) {
-                    throw new Exception('User configuration is null');
-                }
                 $result = $this->ollamaClient->generateSummary($content);
 
                 if ($result['summary'] === '' || $result['tags'] === []) {

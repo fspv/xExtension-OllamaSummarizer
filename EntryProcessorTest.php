@@ -35,6 +35,7 @@ final class EntryProcessorTest extends TestCase
     /** @psalm-suppress PropertyNotSetInConstructor */
     private NullLockManager $lockManager;
 
+    /** @psalm-suppress DeprecatedProperty */
     #[\Override]
     protected function setUp(): void
     {

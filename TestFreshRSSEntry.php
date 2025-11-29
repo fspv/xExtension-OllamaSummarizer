@@ -67,7 +67,7 @@ final class TestFreshRSSEntry extends FreshRSS_Entry
             'id' => $this->id(),
             'guid' => $this->guid(),
             'title' => $this->title(),
-            'author' => $this->author(),
+            'author' => $this->authors(true),
             'content' => $this->content(),
             'link' => $this->link(),
             'date' => (int) $this->date(),

@@ -49,11 +49,7 @@ final class OllamaSummarizerExtension extends Minz_Extension
 
     private static function getConfiguration(): Configuration
     {
-        /** @psalm-suppress DeprecatedProperty */
-        $userConf = FreshRSS_Context::$user_conf;
-        if ($userConf === null) {
-            throw new Exception('User configuration is null');
-        }
+        $userConf = FreshRSS_Context::userConf();
 
         return Configuration::fromUserConfiguration($userConf);
     }
@@ -117,11 +113,7 @@ final class OllamaSummarizerExtension extends Minz_Extension
                     ollamaTimeoutSeconds: Minz_Request::paramInt('ollama_timeout_seconds'),
                 );
 
-                /** @psalm-suppress DeprecatedProperty */
-                $userConf = FreshRSS_Context::$user_conf;
-                if ($userConf === null) {
-                    throw new Exception('User configuration is null');
-                }
+                $userConf = FreshRSS_Context::userConf();
 
                 foreach ($config->toArray() as $key => $value) {
                     if ($key === '') {
