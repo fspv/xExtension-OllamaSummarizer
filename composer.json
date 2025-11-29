@@ -19,7 +19,7 @@
         "cs": "php-cs-fixer fix",
         "cs-check": "php-cs-fixer fix --dry-run --diff --allow-risky=yes",
         "phpstan": "phpstan analyse --memory-limit=1G",
-        "psalm": "psalm -- --show-info=true",
+        "psalm": "psalm --show-info=true",
         "test": [
             "@cs-check",
             "@phpstan",

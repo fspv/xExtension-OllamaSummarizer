@@ -26,7 +26,7 @@ final class FreshExtension_GetSanitizedHtml_Controller extends Minz_ActionContro
 
             // Get the entry ID from the request
             $entryId = $_POST['entry_id'] ?? null;
-            if (!$entryId) {
+            if ($entryId === null || $entryId === '' || !is_string($entryId)) {
                 $this->sendJsonError('Entry ID is required', 400);
 
                 return;

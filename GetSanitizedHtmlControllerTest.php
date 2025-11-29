@@ -12,7 +12,7 @@ require_once dirname(__FILE__) . '/SanitizeHTML.php';
  * Mock implementation of GetSanitizedHtmlController for testing.
  * This allows us to test the controller logic without dealing with exit() and static factories.
  */
-class TestableGetSanitizedHtmlController
+final class TestableGetSanitizedHtmlController
 {
     /** @var TestGetSanitizedHtmlEntryDAO|FreshRSS_EntryDAO|null */
     private $entryDAO = null;
@@ -51,7 +51,7 @@ class TestableGetSanitizedHtmlController
             }
 
             $entryId = $_POST['entry_id'] ?? null;
-            if (!$entryId) {
+            if ($entryId === null || $entryId === '' || !is_string($entryId)) {
                 return [
                     'success' => false,
                     'error' => 'Entry ID is required',
@@ -133,7 +133,7 @@ class TestableGetSanitizedHtmlController
  * Test double for FreshRSS_EntryDAO.
  * Does not extend the real class to avoid database connections.
  */
-class TestGetSanitizedHtmlEntryDAO
+final class TestGetSanitizedHtmlEntryDAO
 {
     /** @var FreshRSS_Entry|null */
     private ?FreshRSS_Entry $entryToReturn = null;
@@ -145,6 +145,7 @@ class TestGetSanitizedHtmlEntryDAO
 
     /**
      * @psalm-suppress PossiblyUnusedParam
+     * @psalm-suppress UnusedParam
      */
     public function searchById(string $id): ?FreshRSS_Entry
     {
@@ -156,6 +157,8 @@ class TestGetSanitizedHtmlEntryDAO
  * Tests for the GetSanitizedHtmlController.
  *
  * @psalm-suppress UnusedClass
+ * @psalm-suppress PropertyNotSetInConstructor
+ * @psalm-suppress PossiblyUndefinedArrayOffset
  */
 final class GetSanitizedHtmlControllerTest extends TestCase
 {
@@ -245,6 +248,7 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertFalse($response['success']);
+        $this->assertArrayHasKey('error', $response);
         $this->assertSame('This endpoint only accepts AJAX requests', $response['error']);
         $this->assertSame(400, $response['statusCode']);
     }
@@ -254,6 +258,7 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertFalse($response['success']);
+        $this->assertArrayHasKey('error', $response);
         $this->assertSame('Entry ID is required', $response['error']);
         $this->assertSame(400, $response['statusCode']);
     }
@@ -265,6 +270,7 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertFalse($response['success']);
+        $this->assertArrayHasKey('error', $response);
         $this->assertSame('Entry ID is required', $response['error']);
         $this->assertSame(400, $response['statusCode']);
     }
@@ -277,6 +283,7 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertFalse($response['success']);
+        $this->assertArrayHasKey('error', $response);
         $this->assertSame('Entry not found', $response['error']);
         $this->assertSame(404, $response['statusCode']);
     }
@@ -290,7 +297,9 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertTrue($response['success']);
+        $this->assertArrayHasKey('html', $response);
         $this->assertSame('', $response['html']);
+        $this->assertArrayHasKey('message', $response);
         $this->assertSame('No HTML content available for this entry', $response['message']);
         $this->assertSame(200, $response['statusCode']);
     }
@@ -304,7 +313,9 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertTrue($response['success']);
+        $this->assertArrayHasKey('html', $response);
         $this->assertSame('', $response['html']);
+        $this->assertArrayHasKey('message', $response);
         $this->assertSame('HTML content is empty', $response['message']);
         $this->assertSame(200, $response['statusCode']);
     }
@@ -318,8 +329,10 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertTrue($response['success']);
+        $this->assertArrayHasKey('html', $response);
         $this->assertSame('', $response['html']);
         // Note: isset() returns false for null values, so this returns "No HTML content available"
+        $this->assertArrayHasKey('message', $response);
         $this->assertSame('No HTML content available for this entry', $response['message']);
         $this->assertSame(200, $response['statusCode']);
     }
@@ -333,6 +346,7 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertFalse($response['success']);
+        $this->assertArrayHasKey('error', $response);
         $this->assertSame('Feed not found for entry', $response['error']);
         $this->assertSame(404, $response['statusCode']);
     }
@@ -348,8 +362,9 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertTrue($response['success']);
-        $this->assertIsString($response['html']);
+        $this->assertArrayHasKey('html', $response);
         $this->assertNotEmpty($response['html']);
+        $this->assertArrayHasKey('message', $response);
         $this->assertSame('HTML loaded successfully', $response['message']);
         $this->assertSame(200, $response['statusCode']);
     }
@@ -362,6 +377,7 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertFalse($response['success']);
+        $this->assertArrayHasKey('error', $response);
         $this->assertStringContainsString('Failed to load HTML content', $response['error']);
         $this->assertStringContainsString('Database error', $response['error']);
         $this->assertSame(500, $response['statusCode']);
@@ -379,7 +395,7 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertTrue($response['success']);
-        $this->assertIsString($response['html']);
+        $this->assertArrayHasKey('html', $response);
         $this->assertStringNotContainsString('<script>', $response['html']);
         $this->assertStringNotContainsString('alert', $response['html']);
     }
@@ -409,7 +425,7 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertTrue($response['success']);
-        $this->assertIsString($response['html']);
+        $this->assertArrayHasKey('html', $response);
         $this->assertStringContainsString('example.com', $response['html']);
     }
 
@@ -425,7 +441,7 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertTrue($response['success']);
-        $this->assertIsString($response['html']);
+        $this->assertArrayHasKey('html', $response);
         $this->assertNotEmpty($response['html']);
     }
 
@@ -441,6 +457,6 @@ final class GetSanitizedHtmlControllerTest extends TestCase
         $response = $this->controller->firstAction();
 
         $this->assertTrue($response['success']);
-        $this->assertIsString($response['html']);
+        $this->assertArrayHasKey('html', $response);
     }
 }
