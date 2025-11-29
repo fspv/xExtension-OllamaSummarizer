@@ -6,7 +6,10 @@ use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/NullLockManager.php';
 
-class NullLockManagerTest extends TestCase
+/**
+ * @psalm-suppress UnusedClass
+ */
+final class NullLockManagerTest extends TestCase
 {
     public function testAlwaysAcquiresLock(): void
     {

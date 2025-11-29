@@ -8,7 +8,7 @@ require_once dirname(__FILE__) . '/WebpageFetcher.php';
 require_once dirname(__FILE__) . '/OllamaClient.php';
 require_once dirname(__FILE__) . '/LockManager.php';
 
-class EntryProcessor
+final class EntryProcessor
 {
     private Logger $logger;
 
@@ -32,7 +32,8 @@ class EntryProcessor
 
     public function processEntry(FreshRSS_Entry $entry, bool $force = false): FreshRSS_Entry
     {
-        $this->logger->debug('Processing entry: ' . json_encode($entry->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        $entryJson = json_encode($entry->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $this->logger->debug('Processing entry: ' . ($entryJson !== false ? $entryJson : '[failed to encode]'));
 
         // Try to acquire the lock
         $entryId = $entry->guid();
@@ -58,9 +59,10 @@ class EntryProcessor
 
             if ($entry->hasAttribute('ai-tags')) {
                 $savedTags = $entry->attributeArray('ai-tags');
-                if (!empty($savedTags)) {
+                if ($savedTags !== [] && $savedTags !== null) {
                     $currentTags = $entry->tags();
-                    $this->logger->debug('Current tags: ' . json_encode($currentTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                    $currentTagsJson = json_encode($currentTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    $this->logger->debug('Current tags: ' . ($currentTagsJson !== false ? $currentTagsJson : '[failed to encode]'));
 
                     foreach ($savedTags as $tag) {
                         if (!empty($tag) && !in_array($tag, $currentTags, true)) {
@@ -69,7 +71,8 @@ class EntryProcessor
                     }
 
                     $entry->_tags($currentTags);
-                    $this->logger->debug('Restored tags: ' . json_encode($currentTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                    $restoredTagsJson = json_encode($currentTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    $this->logger->debug('Restored tags: ' . ($restoredTagsJson !== false ? $restoredTagsJson : '[failed to encode]'));
                 }
             }
 
@@ -103,13 +106,14 @@ class EntryProcessor
 
                 // Generate tags and summary using Ollama
                 $this->logger->debug('Sending content to Ollama');
+                /** @psalm-suppress DeprecatedProperty */
                 $userConf = FreshRSS_Context::$user_conf;
                 if ($userConf === null) {
                     throw new Exception('User configuration is null');
                 }
                 $result = $this->ollamaClient->generateSummary($content);
 
-                if (empty($result['summary']) || empty($result['tags'])) {
+                if ($result['summary'] === '' || $result['tags'] === []) {
                     $this->logger->debug('Empty response from Ollama');
                 } else {
                     $this->logger->debug('Ollama response received');
@@ -124,7 +128,8 @@ class EntryProcessor
 
             $entry->_attribute('ai-processed', true);
 
-            $this->logger->debug('Finished processing entry ' . json_encode($entry->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            $finishedJson = json_encode($entry->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $this->logger->debug('Finished processing entry ' . ($finishedJson !== false ? $finishedJson : '[failed to encode]'));
 
             return $entry;
         } catch (Exception $e) {
@@ -158,14 +163,16 @@ class EntryProcessor
         $tags = $result['tags'];
 
         $this->logger->debug('Extracted summary: ' . substr($summary, 0, 100) . '...');
-        $this->logger->debug('Extracted tags: ' . json_encode($tags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        $tagsJson = json_encode($tags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $this->logger->debug('Extracted tags: ' . ($tagsJson !== false ? $tagsJson : '[failed to encode]'));
 
         $entry->_attribute('ai-summary', $summary);
         $entry->_attribute('ai-tags', []);
 
-        if (!empty($tags)) {
+        if ($tags !== [] && $tags !== null) {
             $currentTags = $entry->tags();
-            $this->logger->debug('Current tags: ' . json_encode($currentTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            $currentTagsJson = json_encode($currentTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $this->logger->debug('Current tags: ' . ($currentTagsJson !== false ? $currentTagsJson : '[failed to encode]'));
 
             $addedTags = [];
             foreach ($tags as $tag) {
@@ -185,8 +192,10 @@ class EntryProcessor
             $uniqueTags = array_values(array_unique($currentTags));
             $entry->_tags($uniqueTags);
 
-            $this->logger->debug('Added tags: ' . json_encode($addedTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-            $this->logger->debug('Final tags: ' . json_encode($uniqueTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            $addedTagsJson = json_encode($addedTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $uniqueTagsJson = json_encode($uniqueTags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $this->logger->debug('Added tags: ' . ($addedTagsJson !== false ? $addedTagsJson : '[failed to encode]'));
+            $this->logger->debug('Final tags: ' . ($uniqueTagsJson !== false ? $uniqueTagsJson : '[failed to encode]'));
         }
     }
 }

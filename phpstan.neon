@@ -4,6 +4,11 @@ parameters:
         - .
     excludePaths:
         - vendor/*
+    bootstrapFiles:
+        - phpstan-bootstrap.php
+    scanDirectories:
+        - vendor/freshrss/app/Models
+        - vendor/freshrss/lib
     ignoreErrors:
         -
             identifier: missingType.iterableValue 

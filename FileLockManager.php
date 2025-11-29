@@ -10,7 +10,7 @@ require_once dirname(__FILE__) . '/constants.php';
  * File-based lock manager implementation using PHP's flock()
  * Provides exclusive locking to prevent concurrent article processing.
  */
-class FileLockManager implements LockManager
+final class FileLockManager implements LockManager
 {
     private Logger $logger;
 
@@ -39,6 +39,7 @@ class FileLockManager implements LockManager
      *
      * @return bool True if lock was acquired, false if another process holds the lock
      */
+    #[\Override]
     public function acquireLock(string $lockIdentifier = ''): bool
     {
         // If we already have a lock, return true
@@ -67,12 +68,16 @@ class FileLockManager implements LockManager
 
             // Write process info to lock file for debugging
             ftruncate($this->lockHandle, 0);
-            fwrite($this->lockHandle, json_encode([
+            $lockInfoJson = json_encode([
                 'pid' => getmypid(),
                 'timestamp' => time(),
                 'identifier' => $lockIdentifier,
                 'hostname' => gethostname(),
-            ]) . "\n");
+            ]);
+            if ($lockInfoJson === false) {
+                $lockInfoJson = '{}';
+            }
+            fwrite($this->lockHandle, $lockInfoJson . "\n");
             fflush($this->lockHandle);
 
             $this->logger->debug("Lock acquired successfully{$identifier}");
@@ -95,6 +100,7 @@ class FileLockManager implements LockManager
     /**
      * Releases the currently held lock.
      */
+    #[\Override]
     public function releaseLock(): void
     {
         if (!$this->hasLock || $this->lockHandle === null) {
@@ -126,6 +132,7 @@ class FileLockManager implements LockManager
     /**
      * Checks if a lock is currently held by this instance.
      */
+    #[\Override]
     public function isLocked(): bool
     {
         return $this->hasLock;

@@ -16,7 +16,7 @@ interface OllamaClient
     public function generateSummary(string $content): array;
 }
 
-class OllamaClientImpl implements OllamaClient
+final class OllamaClientImpl implements OllamaClient
 {
     private Logger $logger;
 
@@ -59,6 +59,7 @@ class OllamaClientImpl implements OllamaClient
         $this->timeoutSeconds = $timeoutSeconds;
     }
 
+    #[\Override]
     public function generateSummary(string $content): array
     {
         $this->logger->debug('Starting Ollama summary generation');
@@ -132,12 +133,14 @@ class OllamaClientImpl implements OllamaClient
 
         if (!empty($this->modelOptions)) {
             $data['options'] = $this->modelOptions;
-            $this->logger->debug('Using model options: ' . json_encode($this->modelOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            $optionsJson = json_encode($this->modelOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $this->logger->debug('Using model options: ' . ($optionsJson !== false ? $optionsJson : '[failed to encode]'));
         }
 
         if ($format !== null) {
             $data['format'] = $format;
-            $this->logger->debug('Using format: ' . json_encode($format, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            $formatJson = json_encode($format, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $this->logger->debug('Using format: ' . ($formatJson !== false ? $formatJson : '[failed to encode]'));
         }
 
         $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -149,6 +152,9 @@ class OllamaClientImpl implements OllamaClient
 
         try {
             $ch = curl_init($apiEndpoint);
+            if ($ch === false) {
+                throw new Exception('Failed to initialize cURL');
+            }
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
@@ -186,7 +192,8 @@ class OllamaClientImpl implements OllamaClient
             }
 
             if (!isset($response['response'])) {
-                $this->logger->debug('Unexpected response format: ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                $responseJson = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $this->logger->debug('Unexpected response format: ' . ($responseJson !== false ? $responseJson : '[failed to encode]'));
 
                 throw new Exception('Unexpected response format from Ollama');
             }

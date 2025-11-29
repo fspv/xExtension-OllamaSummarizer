@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once dirname(__FILE__) . '/OllamaClient.php';
 require_once dirname(__FILE__) . '/Logger.php';
 
-class TestOllamaClient implements OllamaClient
+final class TestOllamaClient implements OllamaClient
 {
     private Logger $logger;
 
@@ -24,6 +24,7 @@ class TestOllamaClient implements OllamaClient
         $this->response = $response;
     }
 
+    #[\Override]
     public function generateSummary(string $content): array
     {
         if ($this->response === null) {

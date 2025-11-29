@@ -61,13 +61,56 @@ Make sure to test:
 6. Try to enable the default feed, delete all articles and then reload articles
 7. Check that all the config options are translated.
 
-## Dev tips
+## Development
 
-Extensions guide https://freshrss.github.io/FreshRSS/en/developers/03_Backend/05_Extensions.html
+### Setting Up Development Environment
 
-Some stuff to make php lsp work
+This project uses Nix for reproducible development environments. The easiest way to get started:
+
 ```sh
-nix-shell -p php83Packages.php-cs-fixer --pure --command 'php-cs-fixer fix extension.php'
-nix-shell -p php83Packages.composer --pure --run 'composer install'
-git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
+nix-shell
 ```
+
+This will automatically:
+- Install PHP 8.4, Composer, and Git
+- Clone the FreshRSS repository to `vendor/freshrss` (required for development)
+- Install all Composer dependencies
+
+### Running Tests and Linters
+
+The project includes comprehensive testing and code quality checks:
+
+```sh
+# Run all tests and linters (recommended before committing)
+composer test
+
+# Individual commands:
+composer cs-check    # Check code style (PHP CS Fixer)
+composer cs          # Fix code style automatically
+composer phpstan     # Run PHPStan static analysis (level 8)
+composer psalm       # Run Psalm static analysis
+phpunit              # Run unit tests
+```
+
+All tests must pass before submitting a Pull Request. The test suite includes:
+- **PHP CS Fixer**: Enforces PSR-12 coding standards
+- **PHPStan**: Static analysis at level 8
+- **Psalm**: Additional static analysis with strict type checking
+- **PHPUnit**: 36 unit tests with 129+ assertions
+
+### Code Quality Standards
+
+- All PHP code must be strictly typed (`declare(strict_types=1)`)
+- PHPStan must pass at level 8 with no errors
+- Psalm must pass with no errors
+- All code must follow PSR-12 coding standards
+- Unit tests are required for new functionality
+
+### IDE Setup
+
+For LSP/IDE support, the development environment provides:
+- PHP 8.4 type checking
+- FreshRSS classes available in `vendor/freshrss`
+- Composer autoloading configured
+
+Extensions guide: https://freshrss.github.io/FreshRSS/en/developers/03_Backend/05_Extensions.html

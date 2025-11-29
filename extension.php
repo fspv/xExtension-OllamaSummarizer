@@ -28,8 +28,9 @@ require_once dirname(__FILE__) . '/LockManager.php';
 require_once dirname(__FILE__) . '/FileLockManager.php';
 require_once dirname(__FILE__) . '/NullLockManager.php';
 
-class OllamaSummarizerExtension extends Minz_Extension
+final class OllamaSummarizerExtension extends Minz_Extension
 {
+    #[\Override]
     public function init(): void
     {
         Minz_Log::debug(LOG_PREFIX . ': Initializing');
@@ -37,13 +38,18 @@ class OllamaSummarizerExtension extends Minz_Extension
         $this->registerHook('entry_before_display', [$this, 'modifyEntryDisplay']);
         $this->registerController('FetchAndSummarizeWithOllama');
 
-        /** @phpstan-ignore-next-line */
+        /**
+         * @phpstan-ignore-next-line
+         *
+         * @psalm-suppress InvalidArgument
+         */
         $scriptUrl = $this->getFileUrl('summarize.js', 'js');
         Minz_View::appendScript($scriptUrl, async: false);
     }
 
     private static function getConfiguration(): Configuration
     {
+        /** @psalm-suppress DeprecatedProperty */
         $userConf = FreshRSS_Context::$user_conf;
         if ($userConf === null) {
             throw new Exception('User configuration is null');
@@ -75,6 +81,7 @@ class OllamaSummarizerExtension extends Minz_Extension
         return new EntryProcessor($logger, $webpageFetcher, $ollamaClient, $lockManager);
     }
 
+    #[\Override]
     public function handleConfigureAction(): void
     {
         Minz_Log::debug(LOG_PREFIX . ': handleConfigureAction called');
@@ -110,13 +117,14 @@ class OllamaSummarizerExtension extends Minz_Extension
                     ollamaTimeoutSeconds: Minz_Request::paramInt('ollama_timeout_seconds'),
                 );
 
+                /** @psalm-suppress DeprecatedProperty */
                 $userConf = FreshRSS_Context::$user_conf;
                 if ($userConf === null) {
                     throw new Exception('User configuration is null');
                 }
 
                 foreach ($config->toArray() as $key => $value) {
-                    if (!is_string($key) || $key === '') {
+                    if ($key === '') {
                         continue;
                     }
                     $userConf->_attribute($key, $value);
@@ -165,6 +173,9 @@ class OllamaSummarizerExtension extends Minz_Extension
         return $processor->processEntry($entry, $force);
     }
 
+    /**
+     * @psalm-suppress PossiblyUnusedReturnValue
+     */
     public function modifyEntryDisplay(FreshRSS_Entry $entry): FreshRSS_Entry
     {
         $content = $entry->content();
@@ -184,13 +195,13 @@ class OllamaSummarizerExtension extends Minz_Extension
         // Add summary and debug info if they exist
         $summary = $entry->attributeString('ai-summary');
 
-        if (!empty($summary)) {
+        if ($summary !== '' && $summary !== null) {
             $content .= '<hr/><div class="ai-summary"><strong>AI Generated Summary:</strong> ' . htmlspecialchars($summary) . '</div>';
         }
 
         // Add article HTML under the details tag if it exists
         $html = $entry->attributeString('ollama-summarizer-html');
-        if (!empty($html)) {
+        if ($html !== '' && $html !== null) {
             $feed = $entry->feed();
             if ($feed === null) {
                 throw new Exception('Feed is null for entry');

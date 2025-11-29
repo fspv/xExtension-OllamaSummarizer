@@ -7,7 +7,10 @@ use PHPUnit\Framework\TestCase;
 require_once dirname(__FILE__) . '/vendor/autoload.php';
 require_once dirname(__FILE__) . '/Configuration.php';
 
-class ConfigurationTest extends TestCase
+/**
+ * @psalm-suppress UnusedClass
+ */
+final class ConfigurationTest extends TestCase
 {
     public function testCreateDefault(): void
     {
@@ -30,6 +33,7 @@ class ConfigurationTest extends TestCase
     {
         // Create a temporary config file
         $tempFile = tempnam(sys_get_temp_dir(), 'freshrss_test_');
+        $this->assertNotFalse($tempFile, 'Failed to create temporary file');
         file_put_contents($tempFile, '<?php return [
             "ollama_summarizer_chrome_host" => "custom-host",
             "ollama_summarizer_chrome_port" => 9999,
@@ -62,6 +66,7 @@ class ConfigurationTest extends TestCase
     {
         // Create a temporary config file with missing values
         $tempFile = tempnam(sys_get_temp_dir(), 'freshrss_test_');
+        $this->assertNotFalse($tempFile, 'Failed to create temporary file');
         file_put_contents($tempFile, '<?php return [
             // Only specify some values, others will use defaults
             "ollama_summarizer_chrome_host" => "custom-host",

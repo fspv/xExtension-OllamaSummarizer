@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Configuration class for the Ollama Summarizer extension.
  * This class handles all configuration values and their validation.
  */
-class Configuration
+final class Configuration
 {
     /**
      * @param string               $chromeHost             Hostname where Chrome is running with remote debugging enabled
@@ -159,11 +159,7 @@ EOT,
             throw new InvalidArgumentException('Ollama timeout must be between 10 and 3600 seconds');
         }
 
-        foreach ($this->modelOptions as $key => $value) {
-            if (!is_string($key)) {
-                throw new InvalidArgumentException('Model options must have string keys');
-            }
-        }
+        // Model options keys are already validated in fromUserConfiguration
     }
 
     public function getChromeHost(): string

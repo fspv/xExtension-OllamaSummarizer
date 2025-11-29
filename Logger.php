@@ -14,7 +14,7 @@ function escapeForLog(string $string): string
     return str_replace(["\n", "\r"], ['\\n', '\\r'], $string);
 }
 
-class Logger
+final class Logger
 {
     private string $prefix;
 
@@ -36,10 +36,5 @@ class Logger
     public function warning(string $message): void
     {
         Minz_Log::warning($this->prefix . ': ' . escapeForLog($message));
-    }
-
-    public function notice(string $message): void
-    {
-        Minz_Log::notice($this->prefix . ': ' . escapeForLog($message));
     }
 }

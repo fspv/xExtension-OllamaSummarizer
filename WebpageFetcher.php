@@ -213,13 +213,16 @@ class WebpageFetcher
     protected function createChromeTab(): array
     {
         $ch = curl_init("http://{$this->devtoolsHost}:{$this->devtoolsPort}/json/new");
+        if ($ch === false) {
+            throw new Exception('Failed to initialize cURL');
+        }
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
         $createResponse = curl_exec($ch);
         $curlError = curl_error($ch);
         curl_close($ch);
 
-        if (!$createResponse) {
+        if ($createResponse === false || $createResponse === '') {
             throw new Exception('Could not create new tab in Chrome: ' . $curlError);
         }
 
@@ -245,6 +248,11 @@ class WebpageFetcher
         }
 
         $ch = curl_init("http://{$this->devtoolsHost}:{$this->devtoolsPort}/json/close/{$targetId}");
+        if ($ch === false) {
+            $this->logger->error('Failed to initialize cURL for closing Chrome tab');
+
+            return;
+        }
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
 

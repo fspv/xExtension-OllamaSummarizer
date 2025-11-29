@@ -8,12 +8,18 @@ require_once __DIR__ . '/FileLockManager.php';
 require_once __DIR__ . '/Logger.php';
 require_once __DIR__ . '/constants.php';
 
-class FileLockManagerTest extends TestCase
+/**
+ * @psalm-suppress UnusedClass
+ */
+final class FileLockManagerTest extends TestCase
 {
+    /** @psalm-suppress PropertyNotSetInConstructor */
     private string $testLockFile;
 
+    /** @psalm-suppress PropertyNotSetInConstructor */
     private Logger $logger;
 
+    #[\Override]
     protected function setUp(): void
     {
         parent::setUp();
@@ -21,6 +27,7 @@ class FileLockManagerTest extends TestCase
         $this->logger = new Logger('TEST');
     }
 
+    #[\Override]
     protected function tearDown(): void
     {
         // Clean up test lock file if it exists

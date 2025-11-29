@@ -2,11 +2,19 @@
 
 declare(strict_types=1);
 
-class FreshExtension_FetchAndSummarizeWithOllama_Controller extends Minz_ActionController
+/**
+ * @psalm-suppress UnusedClass
+ */
+final class FreshExtension_FetchAndSummarizeWithOllama_Controller extends Minz_ActionController
 {
+    #[\Override]
     public function firstAction(): void
     {
-        Minz_Log::debug('FetchAndSummarizeWithOllamaController actionIndex called with request: ' . json_encode(Minz_Request::params()));
+        $paramsJson = json_encode(Minz_Request::params());
+        if ($paramsJson === false) {
+            $paramsJson = '[failed to encode]';
+        }
+        Minz_Log::debug('FetchAndSummarizeWithOllamaController actionIndex called with request: ' . $paramsJson);
 
         if (!Minz_Request::isPost()) {
             Minz_Request::bad(Minz_Translate::t('feedback.access.denied'));

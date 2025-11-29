@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-class TestFreshRSSEntry extends FreshRSS_Entry
+final class TestFreshRSSEntry extends FreshRSS_Entry
 {
     private array $attributes = [];
 
@@ -10,50 +10,61 @@ class TestFreshRSSEntry extends FreshRSS_Entry
 
     private ?FreshRSS_Feed $feed = null;
 
+    private int $lastUserModified = 0;
+
+    #[\Override]
     public function _attribute(string $key, $value = null): void
     {
         $this->attributes[$key] = $value;
     }
 
+    #[\Override]
     public function hasAttribute(string $key): bool
     {
         return isset($this->attributes[$key]);
     }
 
+    #[\Override]
     public function attributeString(string $key): string
     {
         return (string) ($this->attributes[$key] ?? '');
     }
 
+    #[\Override]
     public function attributeArray(string $key): array
     {
         return (array) ($this->attributes[$key] ?? []);
     }
 
+    #[\Override]
     public function _isUpdated(bool $value): void
     {
         $this->isUpdated = $value;
     }
 
+    #[\Override]
     public function isUpdated(): bool
     {
         return $this->isUpdated;
     }
 
+    #[\Override]
     public function _feed(?FreshRSS_Feed $feed): void
     {
         $this->feed = $feed;
     }
 
+    #[\Override]
     public function feed(): ?FreshRSS_Feed
     {
         return $this->feed;
     }
 
+    #[\Override]
     public function toArray(): array
     {
         return [
-            'id' => (string) $this->id(),
+            'id' => $this->id(),
             'guid' => $this->guid(),
             'title' => $this->title(),
             'author' => $this->author(),
@@ -61,6 +72,7 @@ class TestFreshRSSEntry extends FreshRSS_Entry
             'link' => $this->link(),
             'date' => (int) $this->date(),
             'lastSeen' => $this->lastSeen(),
+            'lastUserModified' => $this->lastUserModified,
             'attributes' => $this->attributes,
             'isUpdated' => $this->isUpdated,
             'hash' => $this->hash(),
@@ -70,20 +82,5 @@ class TestFreshRSSEntry extends FreshRSS_Entry
             'feed' => $this->feed(),
             'tags' => '',
         ];
-    }
-}
-
-class TestFreshRSSFeed
-{
-    private ?string $pathEntries = null;
-
-    public function pathEntries(): ?string
-    {
-        return $this->pathEntries;
-    }
-
-    public function setPathEntries(?string $pathEntries): void
-    {
-        $this->pathEntries = $pathEntries;
     }
 }

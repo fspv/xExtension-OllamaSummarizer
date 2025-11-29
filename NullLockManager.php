@@ -8,13 +8,14 @@ require_once dirname(__FILE__) . '/LockManager.php';
  * Null implementation of LockManager for testing
  * Always succeeds without actually locking anything.
  */
-class NullLockManager implements LockManager
+final class NullLockManager implements LockManager
 {
     private bool $locked = false;
 
     /**
      * Always succeeds in acquiring the "lock".
      */
+    #[\Override]
     public function acquireLock(string $lockIdentifier = ''): bool
     {
         $this->locked = true;
@@ -25,6 +26,7 @@ class NullLockManager implements LockManager
     /**
      * Releases the "lock".
      */
+    #[\Override]
     public function releaseLock(): void
     {
         $this->locked = false;
@@ -33,6 +35,7 @@ class NullLockManager implements LockManager
     /**
      * Returns whether the "lock" is held.
      */
+    #[\Override]
     public function isLocked(): bool
     {
         return $this->locked;

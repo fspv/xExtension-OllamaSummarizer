@@ -13,21 +13,29 @@ require_once dirname(__FILE__) . '/TestWebpageFetcher.php';
 require_once dirname(__FILE__) . '/TestOllamaClient.php';
 require_once dirname(__FILE__) . '/TestFreshRSSEntry.php';
 require_once dirname(__FILE__) . '/EntryProcessor.php';
-require_once dirname(__FILE__) . '/EntryInterface.php';
 require_once dirname(__FILE__) . '/NullLockManager.php';
 
-class EntryProcessorTest extends TestCase
+/**
+ * @psalm-suppress UnusedClass
+ */
+final class EntryProcessorTest extends TestCase
 {
+    /** @psalm-suppress PropertyNotSetInConstructor */
     private EntryProcessor $processor;
 
+    /** @psalm-suppress PropertyNotSetInConstructor */
     private TestOllamaClient $ollamaClient;
 
+    /** @psalm-suppress PropertyNotSetInConstructor */
     private TestWebpageFetcher $webpageFetcher;
 
+    /** @psalm-suppress PropertyNotSetInConstructor */
     private Logger $logger;
 
+    /** @psalm-suppress PropertyNotSetInConstructor */
     private NullLockManager $lockManager;
 
+    #[\Override]
     protected function setUp(): void
     {
         $this->logger = new Logger('test');
@@ -36,7 +44,7 @@ class EntryProcessorTest extends TestCase
         $this->lockManager = new NullLockManager();
 
         // Set up mock user configuration
-        $userConf = new class () {
+        new class () {
             public function attributeInt(string $key): ?int
             {
                 return match ($key) {
@@ -45,6 +53,9 @@ class EntryProcessorTest extends TestCase
             }
         };
         $tempFile = tempnam(sys_get_temp_dir(), 'freshrss_test_');
+        if ($tempFile === false) {
+            throw new RuntimeException('Failed to create temporary file');
+        }
         file_put_contents($tempFile, '<?php return [
             "ollama_summarizer_chrome_host" => "custom-chrome",
             "ollama_summarizer_chrome_port" => 9223,

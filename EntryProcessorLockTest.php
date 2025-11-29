@@ -9,7 +9,10 @@ require_once __DIR__ . '/NullLockManager.php';
 require_once __DIR__ . '/Logger.php';
 require_once __DIR__ . '/constants.php';
 
-class EntryProcessorLockTest extends TestCase
+/**
+ * @psalm-suppress UnusedClass
+ */
+final class EntryProcessorLockTest extends TestCase
 {
     public function testProcessEntryAcquiresAndReleasesLock(): void
     {
@@ -31,7 +34,7 @@ class EntryProcessorLockTest extends TestCase
 
         $entry->expects($this->exactly(2))
             ->method('hasAttribute')
-            ->willReturnCallback(function ($attribute) {
+            ->willReturnCallback(function (string $attribute): bool {
                 if ($attribute === 'ai-processed') {
                     return true; // Entry already processed
                 }

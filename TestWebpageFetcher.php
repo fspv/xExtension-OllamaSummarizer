@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once dirname(__FILE__) . '/WebpageFetcher.php';
 require_once dirname(__FILE__) . '/Configuration.php';
 
-class TestWebpageFetcher extends WebpageFetcher
+final class TestWebpageFetcher extends WebpageFetcher
 {
     private ?string $response = null;
 
@@ -29,6 +29,7 @@ class TestWebpageFetcher extends WebpageFetcher
         $this->attempts = 0;
     }
 
+    #[\Override]
     protected function createChromeTab(): array
     {
         $this->attempts++;
@@ -39,6 +40,7 @@ class TestWebpageFetcher extends WebpageFetcher
         return ['wsUrl' => 'ws://test', 'targetId' => 'test-id'];
     }
 
+    #[\Override]
     protected function attemptFetch(string $url, string $path): array
     {
         $this->attempts++;

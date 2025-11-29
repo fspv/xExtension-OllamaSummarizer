@@ -2,11 +2,12 @@
 
 function mySanitizeHTML(FreshRSS_Feed $feed, string $url, string $html): string
 {
-    if (strlen($html) == 0) {
+    if ($html === '') {
         return '';
     }
 
     $doc = new DOMDocument();
+    /* @psalm-suppress ArgumentTypeCoercion */
     $doc->loadHTML($html, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
     $xpath = new DOMXPath($doc);
 
@@ -15,7 +16,8 @@ function mySanitizeHTML(FreshRSS_Feed $feed, string $url, string $html): string
         $base = $url;
     } elseif (str_starts_with($base, '//')) {
         //Protocol-relative URLs "//www.example.net"
-        $base = (parse_url($url, PHP_URL_SCHEME) ?? 'https') . ':' . $base;
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        $base = ($scheme !== false && $scheme !== null ? $scheme : 'https') . ':' . $base;
     }
 
     $html = '';
@@ -42,7 +44,7 @@ function mySanitizeHTML(FreshRSS_Feed $feed, string $url, string $html): string
     }
 
     unset($xpath, $doc);
-    $html = sanitizeHTML($html, $base);
+    $html = FreshRSS_SimplePieCustom::sanitizeHTML($html, $base);
 
     if ($path_entries_filter !== '') {
         // Remove unwanted elements again after sanitizing, for CSS selectors to also match sanitized content
@@ -60,7 +62,8 @@ function mySanitizeHTML(FreshRSS_Feed $feed, string $url, string $html): string
             $modified = true;
         }
         if ($modified) {
-            $html = $doc->saveHTML($doc->getElementsByTagName('body')->item(0) ?? $doc->firstElementChild) ?: $html;
+            $savedHtml = $doc->saveHTML($doc->getElementsByTagName('body')->item(0) ?? $doc->firstElementChild);
+            $html = ($savedHtml !== false && $savedHtml !== '') ? $savedHtml : $html;
         }
     }
 
