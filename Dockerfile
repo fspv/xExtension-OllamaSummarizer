@@ -23,16 +23,15 @@ RUN git clone https://github.com/FreshRSS/FreshRSS.git vendor/freshrss
 RUN composer install --no-interaction --no-scripts
 
 # Copy the rest of the application
-COPY *.php .
-COPY Controllers/ .
-COPY composer.json .
-COPY composer.lock .
-COPY phpunit.xml .
-COPY phpstan.neon .
-COPY psalm.xml .
-COPY .php-cs-fixer.dist.php .
-COPY psalm-baseline.xml .
-COPY psalm.xml .
+COPY *.php ./
+COPY Controllers/ Controllers/
+COPY composer.json ./
+COPY composer.lock ./
+COPY phpunit.xml ./
+COPY phpstan.neon ./
+COPY psalm.xml ./
+COPY .php-cs-fixer.dist.php ./
+COPY psalm-baseline.xml ./
 # Create a script to run all checks
 RUN echo '#!/bin/bash\n\
 composer run-script test\n\
