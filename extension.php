@@ -37,6 +37,7 @@ final class OllamaSummarizerExtension extends Minz_Extension
         $this->registerHook('entry_before_insert', [$this, 'processEntry']);
         $this->registerHook('entry_before_display', [$this, 'modifyEntryDisplay']);
         $this->registerController('FetchAndSummarizeWithOllama');
+        $this->registerController('GetSanitizedHtml');
 
         /**
          * @phpstan-ignore-next-line
@@ -191,14 +192,21 @@ final class OllamaSummarizerExtension extends Minz_Extension
             $content .= '<hr/><div class="ai-summary"><strong>AI Generated Summary:</strong> ' . htmlspecialchars($summary) . '</div>';
         }
 
-        // Add article HTML under the details tag if it exists
+        // Add article HTML that loads on demand when details is expanded
         $html = $entry->attributeString('ollama-summarizer-html');
         if ($html !== '' && $html !== null) {
-            $feed = $entry->feed();
-            if ($feed === null) {
-                throw new Exception('Feed is null for entry');
-            }
-            $content .= '<hr/><details><summary>Article HTML</summary>' . mySanitizeHTML($feed, $entry->link(), $html) . '</details>';
+            $content .= sprintf(
+                '<hr/><details class="article-html-container" data-entry-id="%s" data-html-loaded="false">
+                    <summary>Article HTML</summary>
+                    <div class="html-content-area">
+                        <div class="html-loading" style="text-align: center; padding: 20px;">
+                            <em>Loading HTML content...</em>
+                        </div>
+                        <div class="html-content" style="display: none;"></div>
+                    </div>
+                </details>',
+                htmlspecialchars($entry->id())
+            );
         }
 
         $entry->_content($content);

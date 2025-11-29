@@ -50,6 +50,72 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Handle details expansion to auto-load HTML
+    function handleDetailsToggle(e) {
+        const details = e.currentTarget;
+
+        // Only load if opening (not closing) and not already loaded
+        if (!details.open || details.dataset.htmlLoaded === 'true') {
+            return;
+        }
+
+        console.log('Loading HTML for expanded details');
+        const entryId = details.dataset.entryId;
+        const container = details.querySelector('.html-content-area');
+
+        if (!container) {
+            console.error('Could not find HTML content container');
+            return;
+        }
+
+        const loadingDiv = container.querySelector('.html-loading');
+        const contentDiv = container.querySelector('.html-content');
+
+        // Mark as loaded to prevent duplicate requests
+        details.dataset.htmlLoaded = 'true';
+
+        // Get CSRF token from context
+        const csrf = window.context.csrf;
+        if (!csrf) {
+            loadingDiv.style.display = 'none';
+            contentDiv.innerHTML = '<em style="color: red;">Error: CSRF token not found</em>';
+            contentDiv.style.display = 'block';
+            return;
+        }
+
+        // Send the request to load sanitized HTML
+        fetch('?c=GetSanitizedHtml', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'entry_id=' + encodeURIComponent(entryId) + '&_csrf=' + encodeURIComponent(csrf)
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingDiv.style.display = 'none';
+
+            if (data.success) {
+                contentDiv.innerHTML = data.html || '<em>No HTML content available</em>';
+                contentDiv.style.display = 'block';
+            } else {
+                contentDiv.innerHTML = '<em style="color: red;">Error: ' + (data.error || 'Unknown error') + '</em>';
+                contentDiv.style.display = 'block';
+                // Allow retry by resetting the loaded flag
+                details.dataset.htmlLoaded = 'false';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading HTML:', error);
+            loadingDiv.style.display = 'none';
+            contentDiv.innerHTML = '<em style="color: red;">Error: ' + error.message + '</em>';
+            contentDiv.style.display = 'block';
+            // Allow retry by resetting the loaded flag
+            details.dataset.htmlLoaded = 'false';
+        });
+    }
+
     // Use event delegation for all buttons (current and future)
     document.addEventListener('click', function(e) {
         if (e.target && e.target.classList.contains('summarize-btn')) {
@@ -62,6 +128,14 @@ document.addEventListener('DOMContentLoaded', function() {
             handleButtonClick({currentTarget: e.target});
         }
     });
+
+    // Use event delegation for details toggle to auto-load HTML
+    document.addEventListener('toggle', function(e) {
+        if (e.target && e.target.classList.contains('article-html-container')) {
+            console.log('Details toggled for article HTML');
+            handleDetailsToggle({currentTarget: e.target});
+        }
+    }, true);
     
     // Use MutationObserver to detect when new content is added to the DOM
     // We don't need to attach event listeners since we're using delegation
