@@ -23,11 +23,11 @@ pkgs.mkShell {
     echo ""
     echo "Development environment ready!"
     echo "Available commands:"
-    echo "  composer test       - Run all tests (cs-check, phpstan, psalm, phpunit)"
-    echo "  composer cs         - Fix code style"
-    echo "  composer phpstan    - Run PHPStan analysis"
-    echo "  composer psalm      - Run Psalm analysis"
-    echo "  phpunit             - Run unit tests"
+    echo "  composer test                      - Run all tests (cs-check, phpstan, psalm, phpunit)"
+    echo "  composer cs                        - Fix code style"
+    echo "  composer phpstan                   - Run PHPStan analysis"
+    echo "  composer psalm -- --show-info=true - Run Psalm analysis"
+    echo "  phpunit                            - Run unit tests"
     echo ""
   '';
 }

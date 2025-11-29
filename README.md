@@ -85,11 +85,11 @@ The project includes comprehensive testing and code quality checks:
 composer test
 
 # Individual commands:
-composer cs-check    # Check code style (PHP CS Fixer)
-composer cs          # Fix code style automatically
-composer phpstan     # Run PHPStan static analysis (level 8)
-composer psalm       # Run Psalm static analysis
-phpunit              # Run unit tests
+composer cs-check              # Check code style (PHP CS Fixer)
+composer cs                    # Fix code style automatically
+composer phpstan               # Run PHPStan static analysis (level 8)
+composer psalm -- --show-info=true  # Run Psalm static analysis
+phpunit                        # Run unit tests
 ```
 
 All tests must pass before submitting a Pull Request. The test suite includes:
